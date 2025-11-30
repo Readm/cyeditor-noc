@@ -276,3 +276,21 @@
     color: gray;
     border: 1px solid #fff;
 }
+
+.cy-editor-ctx-menu .ctx-menu-item-has-submenu {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cy-editor-ctx-menu .ctx-menu-arrow {
+    font-size: 10px;
+    color: #666;
+    margin-left: 10px;
+}
+
+.cy-editor-ctx-menu .ctx-menu-submenu-item {
+    padding-left: 30px;
+    font-size: 13px;
+    color: #666;
+}

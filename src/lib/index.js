@@ -204,8 +204,11 @@ class CyEditor extends EventBus {
 
     this._listeners._changeUndoRedo = this._changeUndoRedo.bind(this)
 
+    this._listeners.handleContextMenu = this._handleContextMenu.bind(this)
+
     this.cy.on('cyeditor.noderesize-resized cyeditor.noderesize-resizing', this._listeners.showElementInfo)
       .on('cyeditor.toolbar-command', this._listeners.handleCommand)
+      .on('cyeditor.ctxmenu', this._listeners.handleContextMenu)
       .on('click', this._listeners.hoverout)
       .on('select', this._listeners.select)
       .on('cyeditor.addnode', this._listeners.addEles)
@@ -290,7 +293,46 @@ class CyEditor extends EventBus {
 
     // context-menu
     if (contextMenu) {
-      this._plugins.contextMenu = this.cy.contextMenu()
+      this._plugins.contextMenu = this.cy.contextMenu({
+        beforeShow: (e, defaultMenus) => {
+          const target = e.target || e.cyTarget
+          if (target && target.isNode && target.isNode()) {
+            // 为节点创建菜单
+            const nodeType = target.data('type') || 'round-rectangle'
+            const shapeMenus = defaultNodeTypes
+              .filter(nodeTypeDef => nodeTypeDef.buildIn)
+              .map(nodeTypeDef => ({
+                id: `change-shape-${nodeTypeDef.type}`,
+                content: nodeTypeDef.type,
+                disabled: nodeTypeDef.type === nodeType,
+                data: { shapeType: nodeTypeDef.type }
+              }))
+            
+            return [
+              {
+                id: 'change-shape',
+                content: utils.localize('ctxmenu-change-shape'),
+                disabled: false,
+                submenu: shapeMenus,
+                submenuVisible: false
+              },
+              {
+                id: 'remove',
+                content: utils.localize('ctxmenu-remove'),
+                disabled: false,
+                divider: true
+              },
+              {
+                id: 'hide',
+                content: utils.localize('ctxmenu-hide'),
+                disabled: false
+              }
+            ]
+          }
+          // 默认菜单（边或其他）
+          return defaultMenus
+        }
+      })
     }
   }
 
@@ -321,6 +363,111 @@ class CyEditor extends EventBus {
         lineType: value
       })
     })
+  }
+
+  _handleContextMenu (evt, payload = {}) {
+    const menuItem = payload.menuItem || payload
+    if (!menuItem || !menuItem.id) return
+
+    const target = payload.target || (evt.target && evt.target.isNode ? evt.target : this.cy.$(':selected').first())
+    console.log('[ContextMenu] command:', menuItem.id, 'target:', target ? (target.id ? target.id() : target) : 'none')
+
+    if (menuItem.id && menuItem.id.startsWith('change-shape-')) {
+      if (!target || !target.isNode || !target.isNode()) {
+        console.warn('[ContextMenu] No node target for change-shape command')
+        return
+      }
+      const shapeType = (menuItem.data && menuItem.data.shapeType) || menuItem.id.replace('change-shape-', '')
+      this.changeNodeShape(target, shapeType)
+    } else if (menuItem.id === 'remove') {
+      if (target && target.isNode && target.isNode()) {
+        if (this._plugins.undoRedo) {
+          this._undoRedoAction('remove', target)
+        } else {
+          this.cy.remove(target)
+        }
+      } else {
+        this.deleteSelected()
+      }
+    } else if (menuItem.id === 'hide') {
+      if (target && (target.isNode || target.isEdge)) {
+        target.hide()
+      }
+    }
+  }
+
+  changeNodeShape (node, shapeType) {
+    if (!node || !node.isNode || !node.isNode()) return
+    
+    const nodeTypeDef = defaultNodeTypes.find(nt => nt.type === shapeType)
+    if (!nodeTypeDef) {
+      console.warn('Node type definition not found for:', shapeType)
+      return
+    }
+
+    const currentData = node.data()
+    const oldType = currentData.type
+    console.log('Changing node shape from', oldType, 'to', shapeType)
+    
+    const newData = {
+      type: shapeType
+    }
+
+    // 如果新形状有默认尺寸，且当前节点使用的是默认尺寸，则更新尺寸
+    if (nodeTypeDef.width && nodeTypeDef.height) {
+      const currentWidth = currentData.width || defaultConfData.node.width
+      const currentHeight = currentData.height || defaultConfData.node.height
+      const defaultWidth = nodeTypeDef.width
+      const defaultHeight = nodeTypeDef.height
+      
+      // 如果当前尺寸接近默认尺寸，则使用新形状的默认尺寸
+      if (Math.abs(currentWidth - defaultConfData.node.width) < 5 && 
+          Math.abs(currentHeight - defaultConfData.node.height) < 5) {
+        newData.width = defaultWidth
+        newData.height = defaultHeight
+      }
+    }
+
+    // 如果新形状有points（多边形），需要保留points
+    if (nodeTypeDef.points) {
+      newData.points = nodeTypeDef.points
+    }
+
+    // 更新节点数据 - 逐个更新每个属性，确保 cytoscape 检测到变化
+    console.log('Updating node data:', newData)
+    Object.keys(newData).forEach(key => {
+      node.data(key, newData[key])
+      console.log('Set data.' + key + ' =', node.data(key))
+    })
+    
+    // 如果新形状没有 points，移除旧的 points
+    if (!nodeTypeDef.points && node.data('points')) {
+      node.removeData('points')
+      console.log('Removed points data')
+    }
+    
+    // 验证数据是否更新成功
+    const updatedData = node.data()
+    console.log('Node data after update:', updatedData)
+    console.log('Node type in data:', updatedData.type)
+    
+    // 直接通过样式 API 设置形状，确保立即生效
+    try {
+      node.style('shape', shapeType)
+      const actualShape = node.style('shape')
+      console.log('Shape set to:', shapeType, 'Actual shape:', actualShape)
+    } catch (e) {
+      console.error('Error setting shape:', e)
+    }
+    
+    // 再次验证，确保数据已更新
+    setTimeout(() => {
+      const finalData = node.data()
+      console.log('Final node data check:', finalData)
+      console.log('Final type:', finalData.type)
+    }, 100)
+    
+    this.emit('change', node, this)
   }
 
   _handleCommand (evt, item) {
@@ -357,6 +504,12 @@ class CyEditor extends EventBus {
         break
       case 'save' :
         this.save()
+        break
+      case 'save-json' :
+        this.saveJson()
+        break
+      case 'show-json' :
+        this.showJson()
         break
       case 'delete' :
         this.deleteSelected()
@@ -500,6 +653,72 @@ class CyEditor extends EventBus {
       }
     } catch (e) {
       console.log(e)
+    }
+  }
+
+  saveJson () {
+    try {
+      let jsonData = this.json(true)
+      let jsonString = JSON.stringify(jsonData, null, 2)
+      let blob = new Blob([jsonString], { type: 'application/json' })
+      if (window.navigator.msSaveBlob) {
+        window.navigator.msSaveBlob(blob, `chart-${Date.now()}.json`)
+      } else {
+        let a = document.createElement('a')
+        a.download = `chart-${Date.now()}.json`
+        a.href = window.URL.createObjectURL(blob)
+        a.click()
+      }
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+  showJson () {
+    try {
+      let jsonData = this.json(true)
+      let jsonString = JSON.stringify(jsonData, null, 2)
+      
+      // 创建弹窗显示 JSON
+      let modal = document.createElement('div')
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;'
+      
+      let content = document.createElement('div')
+      content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow: auto; position: relative;'
+      
+      let closeBtn = document.createElement('button')
+      closeBtn.textContent = '关闭'
+      closeBtn.style.cssText = 'position: absolute; top: 10px; right: 10px; padding: 5px 15px; cursor: pointer;'
+      closeBtn.onclick = function () {
+        document.body.removeChild(modal)
+      }
+      
+      let pre = document.createElement('pre')
+      pre.style.cssText = 'margin: 0; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word;'
+      pre.textContent = jsonString
+      
+      content.appendChild(closeBtn)
+      content.appendChild(pre)
+      modal.appendChild(content)
+      
+      modal.onclick = function (e) {
+        if (e.target === modal) {
+          document.body.removeChild(modal)
+        }
+      }
+      
+      document.body.appendChild(modal)
+      
+      // 同时在控制台输出，方便调试
+      console.log('Current JSON Data:', jsonData)
+      console.log('Selected nodes:', this.cy.$(':selected').map(node => ({
+        id: node.id(),
+        data: node.data(),
+        shape: node.style('shape')
+      })))
+    } catch (e) {
+      console.error('Error showing JSON:', e)
+      alert('显示 JSON 时出错: ' + e.message)
     }
   }
 

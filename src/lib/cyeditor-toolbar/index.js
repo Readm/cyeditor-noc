@@ -21,7 +21,9 @@ let defaults = {
     { command: 'line-bezier', icon: 'icon-Bezier-', disabled: false, title: utils.localize('toolbar-line-bezier'), selected: false },
     { command: 'gridon', icon: 'icon-grid', disabled: false, title: utils.localize('toolbar-gridon'), selected: false, separator: true },
     { command: 'fit', icon: 'icon-fullscreen', disabled: false, title: utils.localize('toolbar-fit') },
-    { command: 'save', icon: 'icon-save', disabled: false, title: utils.localize('toolbar-save'), separator: true }
+    { command: 'save', icon: 'icon-save', disabled: false, title: utils.localize('toolbar-save'), separator: true },
+    { command: 'save-json', icon: 'icon-jsonfile', disabled: false, title: utils.localize('toolbar-save-json') },
+    { command: 'show-json', icon: 'icon-jsonfile', disabled: false, title: utils.localize('toolbar-show-json') }
   ]
 }
 class Toolbar {

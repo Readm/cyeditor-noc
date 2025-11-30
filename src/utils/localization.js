@@ -18,6 +18,8 @@ const data = {
     'toolbar-gridon': 'Show grid',
     'toolbar-fit': 'Snap to grid',
     'toolbar-save': 'Save',
+    'toolbar-save-json': 'Save as JSON',
+    'toolbar-show-json': 'Show JSON',
     'element-text': 'Text',
     'elements-title': 'Element',
     'elements-label': 'Label',
@@ -26,7 +28,10 @@ const data = {
     'elements-text-color': 'Text color',
     'elements-color': 'Color',
     'window-navigator': 'Navigator',
-    'node-types-base-shape': 'Base Shape'
+    'node-types-base-shape': 'Base Shape',
+    'ctxmenu-change-shape': 'Change Shape',
+    'ctxmenu-remove': 'Remove',
+    'ctxmenu-hide': 'Hide'
   },
   cn: {
     'toolbar-undo': '撤销',
@@ -45,6 +50,8 @@ const data = {
     'toolbar-gridon': '表格辅助',
     'toolbar-fit': '适应画布',
     'toolbar-save': '保存',
+    'toolbar-save-json': '保存为JSON',
+    'toolbar-show-json': '显示JSON',
     'element-text': '文字',
     'elements-title': '元素',
     'elements-label': '名称',
@@ -53,7 +60,10 @@ const data = {
     'elements-text-color': '文字',
     'elements-color': '颜色',
     'window-navigator': '导航器',
-    'node-types-base-shape': '基础形状'
+    'node-types-base-shape': '基础形状',
+    'ctxmenu-change-shape': '切换形状',
+    'ctxmenu-remove': '删除',
+    'ctxmenu-hide': '隐藏'
   }
 }
 
