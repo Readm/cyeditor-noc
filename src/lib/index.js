@@ -16,6 +16,16 @@ import editElements from './cyeditor-edit-elements'
 import dragAddNodes from './cyeditor-drag-add-nodes'
 import contextMenu from './cyeditor-context-menu'
 import { defaultConfData, defaultEditorConfig, defaultNodeTypes } from '../defaults'
+import { networkToDisplay, displayToNetwork } from '../utils/networkMapper'
+
+const cloneNetwork = (network) => JSON.parse(JSON.stringify(network || { nodes: [], edges: [] }))
+const ensureElements = (state = {}) => {
+  const elements = state.elements || {}
+  return {
+    nodes: Array.isArray(elements.nodes) ? elements.nodes : [],
+    edges: Array.isArray(elements.edges) ? elements.edges : []
+  }
+}
 
 cytoscape.use(edgehandles)
 cytoscape.use(cynavigator)
@@ -33,7 +43,72 @@ class CyEditor extends EventBus {
     super()
     this._plugins = {}
     this._listeners = {}
+    this.networkState = null
+    this.displayState = null
+    this._initialNetworkData = params.network || null
+    this._isSyncingNetwork = false
     this._init(params)
+  }
+
+  _applyInitialState () {
+    if (this.networkState) {
+      this._applyDisplayState(this.displayState || networkToDisplay(this.networkState))
+      this._emitNetworkChange('init')
+    } else {
+      this.displayState = this.json(true)
+      this.networkState = displayToNetwork(this.displayState, { nodes: [], edges: [] })
+      this._emitNetworkChange('init')
+    }
+  }
+
+  _applyDisplayState (displayState) {
+    if (!displayState || !this.cy) return
+    const payload = Object.assign({}, displayState)
+    payload.elements = ensureElements(displayState)
+    this._isSyncingNetwork = true
+    this.cy.json(payload)
+    this.displayState = this.cy.json(true)
+    this._isSyncingNetwork = false
+  }
+
+  _syncNetworkFromDisplay (reason = 'manual') {
+    if (!this.cy || this._isSyncingNetwork) return
+    if (!this.displayState) {
+      this.displayState = this.json(true)
+    } else {
+      this.displayState = this.json(true)
+    }
+    const baseNetwork = this.networkState || { nodes: [], edges: [] }
+    this.networkState = displayToNetwork(this.displayState, baseNetwork)
+    this._emitNetworkChange(reason)
+  }
+
+  _emitNetworkChange (reason) {
+    if (!this.networkState) return
+    this.emit('network-change', this.networkState, this, reason)
+    if (this.cy) {
+      this.cy.trigger('cyeditor.network-change', [this.networkState, reason])
+    }
+  }
+
+  loadNetwork (networkJson, options = {}) {
+    if (!networkJson) return
+    this._isSyncingNetwork = true
+    this.networkState = cloneNetwork(networkJson)
+    this.displayState = networkToDisplay(this.networkState)
+    this._applyDisplayState(this.displayState)
+    this._isSyncingNetwork = false
+    if (!options.silent) {
+      this._emitNetworkChange('load')
+    }
+  }
+
+  getNetwork () {
+    return cloneNetwork(this.networkState)
+  }
+
+  getDisplayState () {
+    return JSON.parse(JSON.stringify(this.displayState || this.json(true)))
   }
 
   _init (params) {
@@ -42,6 +117,7 @@ class CyEditor extends EventBus {
     this._initCy()
     this._initPlugin()
     this._initEvents()
+    this._applyInitialState()
   }
 
   _verifyParams (params) {
@@ -105,6 +181,16 @@ class CyEditor extends EventBus {
         })
       }
     }
+
+    if (this._initialNetworkData) {
+      this.networkState = cloneNetwork(this._initialNetworkData)
+      this.displayState = networkToDisplay(this.networkState)
+      this.cyOptions.elements = this.displayState.elements
+    } else if (this.cyOptions.elements) {
+      this.displayState = {
+        elements: ensureElements({ elements: this.cyOptions.elements })
+      }
+    }
   }
 
   _initCy () {
@@ -166,6 +252,9 @@ class CyEditor extends EventBus {
     }
 
     this._listeners.handleCommand = this._handleCommand.bind(this)
+    this._listeners.syncNetwork = () => {
+      this._syncNetworkFromDisplay('undo-redo')
+    }
 
     this._listeners.hoverout = (e) => {
       if (edgehandles) {
@@ -200,6 +289,7 @@ class CyEditor extends EventBus {
       }
       this._hook('afterAdd', el)
       this.emit('change', el, this)
+      this._syncNetworkFromDisplay('add')
     }
 
     this._listeners._changeUndoRedo = this._changeUndoRedo.bind(this)
@@ -213,7 +303,13 @@ class CyEditor extends EventBus {
       .on('select', this._listeners.select)
       .on('cyeditor.addnode', this._listeners.addEles)
       .on('cyeditor.afterDo cyeditor.afterRedo cyeditor.afterUndo', this._listeners._changeUndoRedo)
+      .on('cyeditor.afterDo cyeditor.afterRedo cyeditor.afterUndo', this._listeners.syncNetwork)
+    this.on('change', this._handleInternalChange, this)
     this.emit('ready')
+  }
+
+  _handleInternalChange () {
+    this._syncNetworkFromDisplay('change')
   }
 
   _initPlugin () {
@@ -468,6 +564,7 @@ class CyEditor extends EventBus {
     }, 100)
     
     this.emit('change', node, this)
+    this._syncNetworkFromDisplay('shape')
   }
 
   _handleCommand (evt, item) {
@@ -510,6 +607,9 @@ class CyEditor extends EventBus {
         break
       case 'show-json' :
         this.showJson()
+        break
+      case 'export-network' :
+        this.saveNetworkJson()
         break
       case 'delete' :
         this.deleteSelected()
@@ -637,6 +737,7 @@ class CyEditor extends EventBus {
         this._undoRedoAction('remove', selected)
       }
       this.cy.remove(selected)
+      this._syncNetworkFromDisplay('delete')
     }
   }
 
@@ -676,49 +777,95 @@ class CyEditor extends EventBus {
 
   showJson () {
     try {
-      let jsonData = this.json(true)
-      let jsonString = JSON.stringify(jsonData, null, 2)
-      
-      // 创建弹窗显示 JSON
-      let modal = document.createElement('div')
+      const displayData = this.json(true)
+      const networkData = this.getNetwork()
+      const displayString = JSON.stringify(displayData, null, 2)
+      const networkString = JSON.stringify(networkData, null, 2)
+
+      const modal = document.createElement('div')
       modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;'
-      
-      let content = document.createElement('div')
-      content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow: auto; position: relative;'
-      
-      let closeBtn = document.createElement('button')
+
+      const content = document.createElement('div')
+      content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; max-width: 80%; max-height: 80%; overflow: auto; position: relative; display: flex; flex-direction: column;'
+
+      const closeBtn = document.createElement('button')
       closeBtn.textContent = '关闭'
       closeBtn.style.cssText = 'position: absolute; top: 10px; right: 10px; padding: 5px 15px; cursor: pointer;'
-      closeBtn.onclick = function () {
-        document.body.removeChild(modal)
+      closeBtn.onclick = () => document.body.removeChild(modal)
+
+      const tabBar = document.createElement('div')
+      tabBar.style.cssText = 'display: flex; gap: 8px; margin-bottom: 12px;'
+
+      const displayBtn = document.createElement('button')
+      displayBtn.textContent = 'Display JSON'
+      displayBtn.style.cssText = 'padding: 6px 12px; cursor: pointer;'
+
+      const networkBtn = document.createElement('button')
+      networkBtn.textContent = 'Network JSON'
+      networkBtn.style.cssText = 'padding: 6px 12px; cursor: pointer;'
+
+      const pre = document.createElement('pre')
+      pre.style.cssText = 'margin: 0; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; flex: 1; overflow: auto; border: 1px solid #eee; border-radius: 4px; background: #fafafa;'
+
+      const setActiveView = (type) => {
+        if (type === 'network') {
+          pre.textContent = networkString
+          networkBtn.style.background = '#40a9ff'
+          networkBtn.style.color = '#fff'
+          displayBtn.style.background = '#fff'
+          displayBtn.style.color = '#333'
+        } else {
+          pre.textContent = displayString
+          displayBtn.style.background = '#40a9ff'
+          displayBtn.style.color = '#fff'
+          networkBtn.style.background = '#fff'
+          networkBtn.style.color = '#333'
+        }
       }
-      
-      let pre = document.createElement('pre')
-      pre.style.cssText = 'margin: 0; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word;'
-      pre.textContent = jsonString
-      
+
+      displayBtn.onclick = () => setActiveView('display')
+      networkBtn.onclick = () => setActiveView('network')
+
+      tabBar.appendChild(displayBtn)
+      tabBar.appendChild(networkBtn)
+
       content.appendChild(closeBtn)
+      content.appendChild(tabBar)
       content.appendChild(pre)
       modal.appendChild(content)
-      
+
       modal.onclick = function (e) {
         if (e.target === modal) {
           document.body.removeChild(modal)
         }
       }
-      
+
       document.body.appendChild(modal)
-      
-      // 同时在控制台输出，方便调试
-      console.log('Current JSON Data:', jsonData)
-      console.log('Selected nodes:', this.cy.$(':selected').map(node => ({
-        id: node.id(),
-        data: node.data(),
-        shape: node.style('shape')
-      })))
+      setActiveView('display')
+
+      console.log('Display JSON:', displayData)
+      console.log('Network JSON:', networkData)
     } catch (e) {
       console.error('Error showing JSON:', e)
       alert('显示 JSON 时出错: ' + e.message)
+    }
+  }
+
+  saveNetworkJson () {
+    try {
+      const networkData = this.getNetwork()
+      const jsonString = JSON.stringify(networkData, null, 2)
+      let blob = new Blob([jsonString], { type: 'application/json' })
+      if (window.navigator.msSaveBlob) {
+        window.navigator.msSaveBlob(blob, `network-${Date.now()}.json`)
+      } else {
+        let a = document.createElement('a')
+        a.download = `network-${Date.now()}.json`
+        a.href = window.URL.createObjectURL(blob)
+        a.click()
+      }
+    } catch (e) {
+      console.error('Error exporting network JSON:', e)
     }
   }
 

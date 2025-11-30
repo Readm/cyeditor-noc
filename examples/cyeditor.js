@@ -2,6 +2,10 @@ import CyEditor from '../src'
 export default {
   name: 'CyEditor',
   props: {
+    network: {
+      type: Object,
+      default: null
+    },
     value: {
       type: Object,
       default: () => ({
@@ -33,13 +37,32 @@ export default {
       editor: {
         container,
         ...this.editorConfig
-      }
+      },
+      network: this.network
     }
     this.cyEditor = new CyEditor(config)
-    this.cyEditor.json(this.value)
-    this.cyEditor.on('change', (scope, editor) => {
-      // let json = this.cyEditor.json()
-    })
+    if (!this.network && this.value) {
+      this.cyEditor.json(this.value)
+    }
+    this.cyEditor.on('network-change', (evt, editorInstance, reason) => {
+      const editor = editorInstance || this.cyEditor
+      if (editor && typeof editor.getNetwork === 'function') {
+        this.$emit('network-change', {
+          reason,
+          network: editor.getNetwork()
+        })
+      }
+    }, this)
+  },
+  watch: {
+    network: {
+      deep: true,
+      handler (val) {
+        if (this.cyEditor && val) {
+          this.cyEditor.loadNetwork(val, { silent: true })
+        }
+      }
+    }
   },
   render (h) {
     return h('div')

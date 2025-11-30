@@ -24,7 +24,9 @@
         "lint": "vue-cli-service lint --fix",
         "docs:dev": "vuepress dev docs",
         "docs:build": "vuepress build docs",
-        "test": "echo \"Error: no test specified\" && exit 1",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
         "precommit": "lint-staged",
         "deploy": "./deploy.sh"
     },
@@ -66,6 +68,11 @@
         "vue": "^2.6.10",
         "vue-template-compiler": "^2.6.10",
         "vuepress": "^1.0.2",
-        "webpack": ">=4 < 4.29"
+        "webpack": ">=4 < 4.29",
+        "jest": "^26.6.3",
+        "babel-jest": "^26.6.3",
+        "@babel/core": "^7.12.3",
+        "@babel/preset-env": "^7.12.1",
+        "jest-environment-jsdom": "^26.6.2"
     }
 }

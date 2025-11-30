@@ -23,7 +23,8 @@ let defaults = {
     { command: 'fit', icon: 'icon-fullscreen', disabled: false, title: utils.localize('toolbar-fit') },
     { command: 'save', icon: 'icon-save', disabled: false, title: utils.localize('toolbar-save'), separator: true },
     { command: 'save-json', icon: 'icon-jsonfile', disabled: false, title: utils.localize('toolbar-save-json') },
-    { command: 'show-json', icon: 'icon-jsonfile', disabled: false, title: utils.localize('toolbar-show-json') }
+    { command: 'show-json', icon: 'icon-jsonfile', disabled: false, title: utils.localize('toolbar-show-json') },
+    { command: 'export-network', icon: 'icon-jsonfile', disabled: false, title: utils.localize('toolbar-export-network'), separator: true }
   ]
 }
 class Toolbar {
