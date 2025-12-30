@@ -39,7 +39,7 @@ cytoscape.use(undoRedo)
 cytoscape.use(contextMenu)
 
 class CyEditor extends EventBus {
-  constructor (params = defaultEditorConfig) {
+  constructor(params = defaultEditorConfig) {
     super()
     this._plugins = {}
     this._listeners = {}
@@ -50,7 +50,7 @@ class CyEditor extends EventBus {
     this._init(params)
   }
 
-  _applyInitialState () {
+  _applyInitialState() {
     if (this.networkState) {
       this._applyDisplayState(this.displayState || networkToDisplay(this.networkState))
       this._emitNetworkChange('init')
@@ -61,7 +61,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  _applyDisplayState (displayState) {
+  _applyDisplayState(displayState) {
     if (!displayState || !this.cy) return
     const payload = Object.assign({}, displayState)
     payload.elements = ensureElements(displayState)
@@ -71,7 +71,7 @@ class CyEditor extends EventBus {
     this._isSyncingNetwork = false
   }
 
-  _syncNetworkFromDisplay (reason = 'manual') {
+  _syncNetworkFromDisplay(reason = 'manual') {
     if (!this.cy || this._isSyncingNetwork) return
     if (!this.displayState) {
       this.displayState = this.json(true)
@@ -83,7 +83,7 @@ class CyEditor extends EventBus {
     this._emitNetworkChange(reason)
   }
 
-  _emitNetworkChange (reason) {
+  _emitNetworkChange(reason) {
     if (!this.networkState) return
     this.emit('network-change', this.networkState, this, reason)
     if (this.cy) {
@@ -91,7 +91,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  loadNetwork (networkJson, options = {}) {
+  loadNetwork(networkJson, options = {}) {
     if (!networkJson) return
     this._isSyncingNetwork = true
     this.networkState = cloneNetwork(networkJson)
@@ -103,15 +103,15 @@ class CyEditor extends EventBus {
     }
   }
 
-  getNetwork () {
+  getNetwork() {
     return cloneNetwork(this.networkState)
   }
 
-  getDisplayState () {
+  getDisplayState() {
     return JSON.parse(JSON.stringify(this.displayState || this.json(true)))
   }
 
-  _init (params) {
+  _init(params) {
     this._initOptions(params)
     this._initDom()
     this._initCy()
@@ -120,7 +120,7 @@ class CyEditor extends EventBus {
     this._applyInitialState()
   }
 
-  _verifyParams (params) {
+  _verifyParams(params) {
     const mustBe = (arr, type) => {
       let valid = true
       arr.forEach(item => {
@@ -153,7 +153,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  _initOptions (params = {}) {
+  _initOptions(params = {}) {
     this.editorOptions = Object.assign({}, defaultEditorConfig.editor, params.editor)
     this._verifyParams(this.editorOptions)
     const { useDefaultNodeTypes, zoomRate } = this.editorOptions
@@ -193,10 +193,10 @@ class CyEditor extends EventBus {
     }
   }
 
-  _initCy () {
+  _initCy() {
     this.cyOptions.container = '#cy'
     if (typeof this.cyOptions.container === 'string') {
-      this.cyOptions.container = utils.query(this.cyOptions.container)[ 0 ]
+      this.cyOptions.container = utils.query(this.cyOptions.container)[0]
     }
     if (!this.cyOptions.container) {
       console.error('There is no any element matching your container')
@@ -205,7 +205,7 @@ class CyEditor extends EventBus {
     this.cy = cytoscape(this.cyOptions)
   }
 
-  _initDom () {
+  _initDom() {
     let { dragAddNodes, navigator, elementsInfo, toolbar, container } = this.editorOptions
     let left = dragAddNodes ? `<div class="left"></div>` : ''
     let navigatorDom = navigator ? `<div class="panel-title">${utils.localize('window-navigator')}</div><div id="thumb"></div>` : ''
@@ -226,7 +226,7 @@ class CyEditor extends EventBus {
     let editorContianer
     if (container) {
       if (typeof container === 'string') {
-        editorContianer = utils.query(container)[ 0 ]
+        editorContianer = utils.query(container)[0]
       } else if (utils.isNode(container)) {
         editorContianer = container
       }
@@ -242,7 +242,7 @@ class CyEditor extends EventBus {
     editorContianer.innerHTML = domHtml
   }
 
-  _initEvents () {
+  _initEvents() {
     const { editElements, edgehandles, noderesize, undoRedo } = this._plugins
 
     this._listeners.showElementInfo = () => {
@@ -267,10 +267,17 @@ class CyEditor extends EventBus {
     }
 
     this._listeners.select = (e) => {
+      // Emit select event with the target element's data
+      this.emit('select', e.target.data())
+
       if (this._doAction === 'select') return
       if (undoRedo) {
         this._undoRedoAction('select', e.target)
       }
+    }
+
+    this._listeners.unselect = (e) => {
+      this.emit('unselect', e.target)
     }
 
     this._listeners.addEles = (evt, el) => {
@@ -301,6 +308,7 @@ class CyEditor extends EventBus {
       .on('cyeditor.ctxmenu', this._listeners.handleContextMenu)
       .on('click', this._listeners.hoverout)
       .on('select', this._listeners.select)
+      .on('unselect', this._listeners.unselect)
       .on('cyeditor.addnode', this._listeners.addEles)
       .on('cyeditor.afterDo cyeditor.afterRedo cyeditor.afterUndo', this._listeners._changeUndoRedo)
       .on('cyeditor.afterDo cyeditor.afterRedo cyeditor.afterUndo', this._listeners.syncNetwork)
@@ -308,17 +316,17 @@ class CyEditor extends EventBus {
     this.emit('ready')
   }
 
-  _handleInternalChange () {
+  _handleInternalChange() {
     this._syncNetworkFromDisplay('change')
   }
 
-  _initPlugin () {
+  _initPlugin() {
     const { dragAddNodes, elementsInfo, toolbar,
       contextMenu, snapGrid, navigator, noderesize } = this.editorOptions
     // edge
     this._plugins.edgehandles = this.cy.edgehandles({
       snap: false,
-      handlePosition () {
+      handlePosition() {
         return 'middle middle'
       },
       edgeParams: this._edgeParams.bind(this)
@@ -354,9 +362,9 @@ class CyEditor extends EventBus {
     let needClipboard = toolbar === true
     if (Array.isArray(toolbar)) {
       needUndoRedo = toolbar.indexOf('undo') > -1 ||
-      toolbar.indexOf('redo') > -1
+        toolbar.indexOf('redo') > -1
       needClipboard = toolbar.indexOf('copy') > -1 ||
-      toolbar.indexOf('paset') > -1
+        toolbar.indexOf('paset') > -1
     }
 
     // clipboard
@@ -403,7 +411,7 @@ class CyEditor extends EventBus {
                 disabled: nodeTypeDef.type === nodeType,
                 data: { shapeType: nodeTypeDef.type }
               }))
-            
+
             return [
               {
                 id: 'change-shape',
@@ -432,7 +440,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  _snapGridChange () {
+  _snapGridChange() {
     if (!this._plugins.cySnapToGrid) return
     if (this.editorOptions.snapGrid) {
       this._plugins.cySnapToGrid.gridOn()
@@ -443,13 +451,13 @@ class CyEditor extends EventBus {
     }
   }
 
-  _edgeParams () {
+  _edgeParams() {
     return {
       data: { lineType: this.editorOptions.lineType }
     }
   }
 
-  _lineTypeChange (value) {
+  _lineTypeChange(value) {
     let selected = this.cy.$('edge:selected')
     if (selected.length < 1) {
       selected = this.cy.$('edge')
@@ -461,7 +469,7 @@ class CyEditor extends EventBus {
     })
   }
 
-  _handleContextMenu (evt, payload = {}) {
+  _handleContextMenu(evt, payload = {}) {
     const menuItem = payload.menuItem || payload
     if (!menuItem || !menuItem.id) return
 
@@ -492,9 +500,9 @@ class CyEditor extends EventBus {
     }
   }
 
-  changeNodeShape (node, shapeType) {
+  changeNodeShape(node, shapeType) {
     if (!node || !node.isNode || !node.isNode()) return
-    
+
     const nodeTypeDef = defaultNodeTypes.find(nt => nt.type === shapeType)
     if (!nodeTypeDef) {
       console.warn('Node type definition not found for:', shapeType)
@@ -504,7 +512,7 @@ class CyEditor extends EventBus {
     const currentData = node.data()
     const oldType = currentData.type
     console.log('Changing node shape from', oldType, 'to', shapeType)
-    
+
     const newData = {
       type: shapeType
     }
@@ -515,10 +523,10 @@ class CyEditor extends EventBus {
       const currentHeight = currentData.height || defaultConfData.node.height
       const defaultWidth = nodeTypeDef.width
       const defaultHeight = nodeTypeDef.height
-      
+
       // 如果当前尺寸接近默认尺寸，则使用新形状的默认尺寸
-      if (Math.abs(currentWidth - defaultConfData.node.width) < 5 && 
-          Math.abs(currentHeight - defaultConfData.node.height) < 5) {
+      if (Math.abs(currentWidth - defaultConfData.node.width) < 5 &&
+        Math.abs(currentHeight - defaultConfData.node.height) < 5) {
         newData.width = defaultWidth
         newData.height = defaultHeight
       }
@@ -535,18 +543,18 @@ class CyEditor extends EventBus {
       node.data(key, newData[key])
       console.log('Set data.' + key + ' =', node.data(key))
     })
-    
+
     // 如果新形状没有 points，移除旧的 points
     if (!nodeTypeDef.points && node.data('points')) {
       node.removeData('points')
       console.log('Removed points data')
     }
-    
+
     // 验证数据是否更新成功
     const updatedData = node.data()
     console.log('Node data after update:', updatedData)
     console.log('Node type in data:', updatedData.type)
-    
+
     // 直接通过样式 API 设置形状，确保立即生效
     try {
       node.style('shape', shapeType)
@@ -555,72 +563,72 @@ class CyEditor extends EventBus {
     } catch (e) {
       console.error('Error setting shape:', e)
     }
-    
+
     // 再次验证，确保数据已更新
     setTimeout(() => {
       const finalData = node.data()
       console.log('Final node data check:', finalData)
       console.log('Final type:', finalData.type)
     }, 100)
-    
+
     this.emit('change', node, this)
     this._syncNetworkFromDisplay('shape')
   }
 
-  _handleCommand (evt, item) {
+  _handleCommand(evt, item) {
     switch (item.command) {
-      case 'undo' :
+      case 'undo':
         this.undo()
         break
-      case 'redo' :
+      case 'redo':
         this.redo()
         break
-      case 'gridon' :
+      case 'gridon':
         this.toggleGrid()
         break
-      case 'zoomin' :
+      case 'zoomin':
         this.zoom(1)
         break
-      case 'zoomout' :
+      case 'zoomout':
         this.zoom(-1)
         break
-      case 'levelup' :
+      case 'levelup':
         this.changeLevel(1)
         break
-      case 'leveldown' :
+      case 'leveldown':
         this.changeLevel(-1)
         break
-      case 'copy' :
+      case 'copy':
         this.copy()
         break
-      case 'paste' :
+      case 'paste':
         this.paste()
         break
-      case 'fit' :
+      case 'fit':
         this.fit()
         break
-      case 'save' :
+      case 'save':
         this.save()
         break
-      case 'save-json' :
+      case 'save-json':
         this.saveJson()
         break
-      case 'show-json' :
-        this.showJson()
+      case 'show-json':
+        this.emit('show-json')
         break
-      case 'export-network' :
+      case 'export-network':
         this.saveNetworkJson()
         break
-      case 'delete' :
+      case 'delete':
         this.deleteSelected()
         break
-      case 'line-bezier' :
+      case 'line-bezier':
         this.setOption('lineType', 'bezier')
         break
-      case 'line-taxi' :
+      case 'line-taxi':
         this.setOption('lineType', 'taxi')
         break
-      case 'line-straight' :
+      case 'line-straight':
         this.setOption('lineType', 'straight')
         break
       case 'boxselect':
@@ -632,7 +640,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  _changeUndoRedo () {
+  _changeUndoRedo() {
     if (!this._plugins.undoRedo || !this._plugins.toolbar) return
     let canRedo = this._plugins.undoRedo.isRedoStackEmpty()
     let canUndo = this._plugins.undoRedo.isUndoStackEmpty()
@@ -644,12 +652,12 @@ class CyEditor extends EventBus {
     this.lastCanUndo = canUndo
   }
 
-  _undoRedoAction (cmd, options) {
+  _undoRedoAction(cmd, options) {
     this._doAction = cmd
     this._plugins.undoRedo.do(cmd, options)
   }
 
-  _hook (hook, params, result = false) {
+  _hook(hook, params, result = false) {
     if (typeof this.editorOptions[hook] === 'function') {
       const res = this.editorOptions[hook](params)
       return result ? res : true
@@ -661,7 +669,7 @@ class CyEditor extends EventBus {
    * @param {string|object} key
    * @param {*} value
    */
-  setOption (key, value) {
+  setOption(key, value) {
     if (typeof key === 'string') {
       this.editorOptions[key] = value
       if (typeof this._handleOptonsChange[key] === 'function') {
@@ -672,7 +680,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  undo () {
+  undo() {
     if (this._plugins.undoRedo) {
       let stack = this._plugins.undoRedo.getRedoStack()
       if (stack.length) {
@@ -684,7 +692,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  redo () {
+  redo() {
     if (this._plugins.undoRedo) {
       let stack = this._plugins.undoRedo.getUndoStack()
       if (stack.length) {
@@ -696,7 +704,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  copy () {
+  copy() {
     if (this._plugins.clipboard) {
       let selected = this.cy.$(':selected')
       if (selected.length) {
@@ -710,7 +718,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  paste () {
+  paste() {
     if (this._plugins.clipboard) {
       if (this._cpids) {
         this._plugins.clipboard.paste(this._cpids)
@@ -720,7 +728,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  changeLevel (type = 0) {
+  changeLevel(type = 0) {
     let selected = this.cy.$(':selected')
     if (selected.length) {
       selected.forEach(el => {
@@ -730,7 +738,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  deleteSelected () {
+  deleteSelected() {
     let selected = this.cy.$(':selected')
     if (selected.length) {
       if (this._plugins.undoRedo) {
@@ -741,7 +749,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  async save () {
+  async save() {
     try {
       let blob = await this.cy.png({ output: 'blob-promise' })
       if (window.navigator.msSaveBlob) {
@@ -757,7 +765,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  saveJson () {
+  saveJson() {
     try {
       let jsonData = this.json(true)
       let jsonString = JSON.stringify(jsonData, null, 2)
@@ -775,7 +783,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  showJson () {
+  showJson() {
     try {
       const displayData = this.json(true)
       const networkData = this.getNetwork()
@@ -851,7 +859,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  saveNetworkJson () {
+  saveNetworkJson() {
     try {
       const networkData = this.getNetwork()
       const jsonString = JSON.stringify(networkData, null, 2)
@@ -869,7 +877,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  fit () {
+  fit() {
     if (!this._fit_status) {
       this._fit_status = { pan: this.cy.pan(), zoom: this.cy.zoom() }
       this.cy.fit()
@@ -882,7 +890,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  zoom (type = 1, level) {
+  zoom(type = 1, level) {
     level = level || this.editorOptions.zoomRate
     let w = this.cy.width()
     let h = this.cy.height()
@@ -896,7 +904,7 @@ class CyEditor extends EventBus {
     })
   }
 
-  toggleGrid () {
+  toggleGrid() {
     if (this._plugins.cySnapToGrid) {
       this.setOption('snapGrid', !this.editorOptions.snapGrid)
     } else {
@@ -904,11 +912,11 @@ class CyEditor extends EventBus {
     }
   }
 
-  jpg (opt = {}) {
+  jpg(opt = {}) {
     return this.cy.png(opt)
   }
 
-  png (opt) {
+  png(opt) {
     return this.cy.png(opt)
   }
   /**
@@ -916,7 +924,7 @@ class CyEditor extends EventBus {
    * @param {*} opt params for cy.json(opt)
    * @param {*} keys JSON Object keys
    */
-  json (opt = false, keys) {
+  json(opt = false, keys) {
     keys = keys || ['boxSelectionEnabled', 'elements', 'pan', 'panningEnabled', 'userPanningEnabled', 'userZoomingEnabled', 'zoom', 'zoomingEnabled']
     // export
     let json = {}
@@ -938,7 +946,7 @@ class CyEditor extends EventBus {
    * @param {string|object} name
    * @param {*} value
    */
-  data (name, value) {
+  data(name, value) {
     return this.cy.data(name, value)
   }
 
@@ -946,11 +954,11 @@ class CyEditor extends EventBus {
    *  remove data
    * @param {string} names  split by space
    */
-  removeData (names) {
+  removeData(names) {
     this.cy.removeData(names)
   }
 
-  destroy () {
+  destroy() {
     this.cy.removeAllListeners()
     this.cy.destroy()
   }

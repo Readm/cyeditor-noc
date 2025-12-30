@@ -1,10 +1,9 @@
 <template>
   <div class="demo-wrapper">
     <div class="demo-actions">
-      <button @click="logNetwork">Log JSON</button>
       <button @click="resetNetwork">Reset</button>
       <button @click="buildNetwork" style="background-color: #e6f7ff; border-color: #1890ff; color: #1890ff;">Build & Deploy</button>
-      
+
       <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px;">
         <button @click="toggleMode" style="font-size: 12px; min-width: 90px;">
           {{ advanceMode === 'step' ? 'Mode: Step' : 'Mode: Target' }} ↻
@@ -17,6 +16,14 @@
 
       <div v-if="connected" style="color: green; margin-left: 10px; align-self: center;">● WS Connected</div>
       <div v-else style="color: red; margin-left: 10px; align-self: center;">○ WS Disconnected</div>
+
+      <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
+        <select v-model="presetName">
+          <option value="bi_ring">Bi-Ring</option>
+        </select>
+        <input type="number" v-model.number="presetNodes" style="width: 50px" title="Nodes" />
+        <button @click="loadPresetNetwork">Load Preset</button>
+      </span>
     </div>
     <cy-editor
       ref="demoEditor"
@@ -25,22 +32,62 @@
       :cy-config="cyConfig"
       :editor-config="editorConfig"
       @network-change="handleNetworkChange"
+      @show-json="logNetwork"
+      @select="handleSelect"
+      @unselect="handleUnselect"
     />
+    
+    <!-- Inspector Panel -->
+    <div v-if="selectedData" class="inspector-panel">
+      <div class="preview-title">Element Info</div>
+      <json-viewer
+        :value="selectedData"
+        :expand-depth="2"
+        boxed
+        sort
+      ></json-viewer>
+    </div>
+
     <div class="network-preview">
       <div class="preview-title">实时 Network JSON</div>
-      <pre>{{ formattedNetwork }}</pre>
+      <json-viewer
+        :value="latestNetwork || networkValue"
+        :expand-depth="1"
+        boxed
+        sort
+      ></json-viewer>
+    </div>
+
+    <!-- Modal for Full JSON Log -->
+    <div v-if="showLogModal" class="modal-overlay" @click.self="showLogModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Current Network JSON</h3>
+          <button @click="showLogModal = false">Close</button>
+        </div>
+        <div class="modal-body">
+          <json-viewer
+            :value="latestNetwork || networkValue"
+            :expand-depth="2"
+            boxed
+            sort
+          ></json-viewer>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import cyEditor from './cyeditor.js'
-import { loadNetworks, resetNetwork, advanceTo, addNetwork } from '../src/api/networkService'
+import { loadNetworks, resetNetwork, advanceTo, addNetwork, loadPreset } from '../src/api/networkService'
+import JsonViewer from 'vue-json-viewer'
 
 export default {
   name: 'App',
   components: {
-    cyEditor
+    cyEditor,
+    JsonViewer
   },
   data () {
     return {
@@ -53,12 +100,17 @@ export default {
       latestNetwork: null,
       cyConfig: {},
       editorConfig: {
-        lineType: 'taxi'
+        lineType: 'taxi',
+        elementsInfo: false // Disable default panel in favor of our custom one
       },
       advanceCycle: 100,
       advanceMode: 'step',
       connected: false,
-      ws: null
+      ws: null,
+      presetName: 'bi_ring',
+      presetNodes: 16,
+      showLogModal: false,
+      selectedData: null
     }
   },
   computed: {
@@ -118,7 +170,7 @@ export default {
       this.latestNetwork = network
     },
     logNetwork () {
-      console.log('Current Network JSON:', this.latestNetwork || this.networkValue)
+      this.showLogModal = true
     },
     async refreshNetwork () {
       try {
@@ -180,6 +232,33 @@ export default {
       } catch (e) {
         console.error('Advance failed', e)
       }
+    },
+    async loadPresetNetwork () {
+      try {
+        console.log(`Loading preset: ${this.presetName} with ${this.presetNodes} nodes`)
+        await loadPreset(this.presetName, { nodes: this.presetNodes })
+        await this.refreshNetwork()
+        this.advanceCycle = 100
+        this.advanceMode = 'step'
+      } catch (e) {
+        console.error('Load preset failed', e)
+        alert('Load preset failed: ' + e.message)
+      }
+    },
+    handleSelect (data) {
+      if (data && data.custom) {
+        // Merge top-level important fields with custom rich data
+        this.selectedData = {
+          id: data.id,
+          name: data.name,
+          ...data.custom
+        }
+      } else {
+        this.selectedData = data
+      }
+    },
+    handleUnselect () {
+      this.selectedData = null
     }
   }
 }
@@ -214,6 +293,22 @@ export default {
     border-radius: 6px;
     padding: 12px;
     background: #fff;
+    min-height: 100px;
+  }
+
+  .inspector-panel {
+    position: absolute;
+    top: 60px; /* Below actions */
+    right: 20px;
+    width: 300px;
+    background: white;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 4px;
+    max-height: 500px;
+    overflow-y: auto;
+    z-index: 900;
   }
 
   .network-preview pre {
@@ -226,5 +321,40 @@ export default {
   .preview-title {
     font-weight: bold;
     margin-bottom: 8px;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+    flex: 1;
   }
 </style>

@@ -28,7 +28,7 @@ export default {
       default: () => ({})
     }
   },
-  mounted () {
+  mounted() {
     const container = this.$el
     let config = {
       cy: {
@@ -53,18 +53,28 @@ export default {
         })
       }
     }, this)
+
+    this.cyEditor.on('show-json', () => {
+      this.$emit('show-json')
+    })
+    this.cyEditor.on('select', (data) => {
+      this.$emit('select', data)
+    })
+    this.cyEditor.on('unselect', () => {
+      this.$emit('unselect')
+    })
   },
   watch: {
     network: {
       deep: true,
-      handler (val) {
+      handler(val) {
         if (this.cyEditor && val) {
           this.cyEditor.loadNetwork(val, { silent: true })
         }
       }
     }
   },
-  render (h) {
+  render(h) {
     return h('div')
   }
 }

@@ -53,9 +53,17 @@ export function advanceTo(cycle, options = {}) {
   }, options)
 }
 
+export function loadPreset(name, params = {}, options = {}) {
+  return request('/load_preset', {
+    method: 'POST',
+    body: JSON.stringify({ name, params })
+  }, options)
+}
+
 export default {
   loadNetworks,
   addNetwork,
   resetNetwork,
-  advanceTo
+  advanceTo,
+  loadPreset
 }

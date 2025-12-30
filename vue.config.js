@@ -18,6 +18,14 @@ module.exports = {
       '/advance_to': {
         target: 'http://localhost:8081',
         changeOrigin: true
+      },
+      '/build_network': {
+        target: 'http://localhost:8081',
+        changeOrigin: true
+      },
+      '/load_preset': {
+        target: 'http://localhost:8081',
+        changeOrigin: true
       }
     }
   }

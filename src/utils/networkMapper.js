@@ -20,6 +20,16 @@ const buildNodeDisplayFromNetwork = (node) => {
   const data = Object.assign({}, display)
   data.id = data.id || (node.node_id != null ? String(node.node_id) : generateId('node'))
 
+  // Custom: Copy rich backend data to data.custom for inspection
+  data.custom = {
+    in_ports: node.in_ports,
+    out_ports: node.out_ports,
+    cache: node.cache,
+    directory: node.directory,
+    node_features: node.node_features,
+    coherence_domain_id: node.coherence_domain_id
+  }
+
   return {
     data,
     position
@@ -42,6 +52,12 @@ const buildEdgeDisplayFromNetwork = (edge, nodeIdToDisplayId) => {
   }
   if (!data.lineType) {
     data.lineType = 'bezier'
+  }
+
+  // Custom: Copy rich backend data
+  data.custom = {
+    packet_types: edge.packet_types,
+    link_status: display.link_status
   }
 
   return {
@@ -83,7 +99,7 @@ const buildEdgeDisplayFromCy = (displayEdge) => {
   return display
 }
 
-export function networkToDisplay (network = {}) {
+export function networkToDisplay(network = {}) {
   const nodes = ensureArray(network.nodes)
   const edges = ensureArray(network.edges)
   const nodeIdToDisplayId = new Map()
@@ -148,7 +164,7 @@ const getNextNumericId = (usedIds, start = 1) => {
   return candidate
 }
 
-export function displayToNetwork (displayState = {}, baseNetwork = {}) {
+export function displayToNetwork(displayState = {}, baseNetwork = {}) {
   const network = deepClone(baseNetwork)
   network.nodes = ensureArray(network.nodes)
   network.edges = ensureArray(network.edges)
