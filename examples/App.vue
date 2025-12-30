@@ -1,8 +1,10 @@
 <template>
   <div class="demo-wrapper">
     <div class="demo-actions">
-      <button @click="logNetwork">控制台输出 Network JSON</button>
-      <button @click="resetNetwork">重置为初始 Network</button>
+      <button @click="logNetwork">Log JSON</button>
+      <button @click="resetNetwork">Reset</button>
+      <input type="number" v-model="advanceCycle" style="width: 60px" />
+      <button @click="advanceSimulation">Advance</button>
     </div>
     <cy-editor
       ref="demoEditor"
@@ -197,7 +199,79 @@ export default {
       }
     }
   }
+<script>
+import cyEditor from './cyeditor.js'
+import { loadNetworks, resetNetwork, advanceTo } from '../src/api/networkService'
+
+export default {
+  name: 'App',
+  components: {
+    cyEditor
+  },
+  data () {
+    return {
+      networkValue: {
+        version: '1.0.0',
+        nodes: [],
+        edges: []
+      },
+      latestNetwork: null,
+      cyConfig: {},
+      editorConfig: {
+        lineType: 'taxi'
+      },
+      advanceCycle: 100
+    }
+  },
+  computed: {
+    formattedNetwork () {
+      return JSON.stringify(this.latestNetwork || this.networkValue, null, 2)
+    }
+  },
+  async mounted () {
+    await this.refreshNetwork()
+  },
+  methods: {
+    handleNetworkChange ({ network }) {
+      this.latestNetwork = network
+    },
+    logNetwork () {
+      console.log('Current Network JSON:', this.latestNetwork || this.networkValue)
+    },
+    async refreshNetwork () {
+        try {
+            const networks = await loadNetworks()
+            if (networks && networks.length > 0) {
+                this.networkValue = networks[0]
+                this.latestNetwork = this.networkValue
+                const editorComponent = this.$refs.demoEditor
+                if (editorComponent && editorComponent.cyEditor) {
+                     editorComponent.cyEditor.loadNetwork(this.networkValue)
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load network:', e)
+        }
+    },
+    async resetNetwork () {
+      try {
+        await resetNetwork({})
+        await this.refreshNetwork()
+      } catch (e) {
+         console.error('Reset failed', e)
+      }
+    },
+    async advanceSimulation () {
+      try {
+        await advanceTo(Number(this.advanceCycle))
+        await this.refreshNetwork()
+      } catch (e) {
+        console.error('Advance failed', e)
+      }
+    }
+  }
 }
+
 
 </script>
 <style scoped lang="stylus">
