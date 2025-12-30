@@ -11,7 +11,7 @@ const buildUrl = (path, baseUrl) => {
   return `${prefix.replace(/\/$/, '')}${path}`
 }
 
-async function request (path, fetchOptions = {}, options = {}) {
+async function request(path, fetchOptions = {}, options = {}) {
   const url = buildUrl(path, options.baseUrl)
   const response = await fetch(url, Object.assign({
     headers: {
@@ -28,25 +28,25 @@ async function request (path, fetchOptions = {}, options = {}) {
   return response.json()
 }
 
-export function loadNetworks (options = {}) {
+export function loadNetworks(options = {}) {
   return request('/load_networks', { method: 'GET' }, options)
 }
 
-export function addNetwork (network, options = {}) {
-  return request('/add_network', {
+export function addNetwork(network, options = {}) {
+  return request('/build_network', {
     method: 'POST',
     body: JSON.stringify(network)
   }, options)
 }
 
-export function resetNetwork (network, options = {}) {
+export function resetNetwork(network, options = {}) {
   return request('/reset_network', {
     method: 'POST',
     body: JSON.stringify(network)
   }, options)
 }
 
-export function advanceTo (cycle, options = {}) {
+export function advanceTo(cycle, options = {}) {
   return request('/advance_to', {
     method: 'POST',
     body: JSON.stringify({ cycle })
@@ -59,4 +59,3 @@ export default {
   resetNetwork,
   advanceTo
 }
-
