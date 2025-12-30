@@ -5,6 +5,8 @@
       <button @click="resetNetwork">Reset</button>
       <input type="number" v-model="advanceCycle" style="width: 60px" />
       <button @click="advanceSimulation">Advance</button>
+      <div v-if="connected" style="color: green; margin-left: 10px; align-self: center;">● WS Connected</div>
+      <div v-else style="color: red; margin-left: 10px; align-self: center;">○ WS Disconnected</div>
     </div>
     <cy-editor
       ref="demoEditor"
@@ -23,184 +25,6 @@
 
 <script>
 import cyEditor from './cyeditor.js'
-
-const locale = 'en'
-const localizationData = {
-  en: {
-    'start': 'Start',
-    'decision': 'Decision'
-  },
-  cn: {
-    'start': '开始',
-    'decision': '条件'
-  }
-}
-
-function localized (key) {
-  return localizationData[locale][key]
-}
-
-const nodes = [
-  {
-    node_id: 1,
-    node_name: localized('start'),
-    node_features: [],
-    display: {
-      id: 'a79249d9-4d5b-43e1-b268-d389df7ed592',
-      type: 'round-rectangle',
-      name: localized('start'),
-      resize: true,
-      bg: '#1890FF',
-      width: 76,
-      height: 56,
-      position: { x: 192.5, y: 52.5 }
-    }
-  },
-  {
-    node_id: 2,
-    node_name: 'Step A',
-    node_features: [],
-    display: {
-      id: '27e14443-0b39-446f-94e2-3e521a1706f9',
-      type: 'round-rectangle',
-      name: '',
-      resize: true,
-      bg: '#1890FF',
-      width: 76,
-      height: 56,
-      position: { x: 87.5, y: 262.5 }
-    }
-  },
-  {
-    node_id: 3,
-    node_name: localized('decision'),
-    node_features: [],
-    display: {
-      id: '4072b83e-b702-4168-b548-56bcc52eebd9',
-      type: 'diamond',
-      name: localized('decision'),
-      resize: true,
-      bg: '#5CDBD3',
-      width: 156,
-      height: 52,
-      position: { x: 192.5, y: 157.5 }
-    }
-  },
-  {
-    node_id: 4,
-    node_name: 'Step B',
-    node_features: [],
-    display: {
-      id: '6be4a6b0-49e2-4b2c-b3bd-135684da938a',
-      type: 'round-rectangle',
-      name: '',
-      resize: true,
-      bg: '#1890FF',
-      width: 76,
-      height: 56,
-      position: { x: 297.5, y: 262.5 }
-    }
-  }
-]
-
-const edges = [
-  {
-    edge_id: 1,
-    src_node_id: 1,
-    src_port_id: 0,
-    dst_node_id: 3,
-    dst_port_id: 0,
-    packet_types: [],
-    display: {
-      data: {
-        id: '3e6d9858-adbe-4b73-828d-d0732ac29279',
-        source: 'a79249d9-4d5b-43e1-b268-d389df7ed592',
-        target: '4072b83e-b702-4168-b548-56bcc52eebd9',
-        lineType: 'taxi'
-      }
-    }
-  },
-  {
-    edge_id: 2,
-    src_node_id: 3,
-    src_port_id: 0,
-    dst_node_id: 2,
-    dst_port_id: 0,
-    packet_types: [],
-    display: {
-      data: {
-        id: 'b63708fe-3b53-469a-b908-4c9608112164',
-        source: '4072b83e-b702-4168-b548-56bcc52eebd9',
-        target: '27e14443-0b39-446f-94e2-3e521a1706f9',
-        lineType: 'taxi'
-      }
-    }
-  },
-  {
-    edge_id: 3,
-    src_node_id: 3,
-    src_port_id: 0,
-    dst_node_id: 4,
-    dst_port_id: 0,
-    packet_types: [],
-    display: {
-      data: {
-        id: '0c4d0dc9-a2ee-4ea5-b422-4730913a7ab1',
-        source: '4072b83e-b702-4168-b548-56bcc52eebd9',
-        target: '6be4a6b0-49e2-4b2c-b3bd-135684da938a',
-        lineType: 'taxi'
-      }
-    }
-  }
-]
-
-export default {
-  name: 'App',
-  components: {
-    cyEditor
-  },
-  data () {
-    return {
-      networkValue: {
-        version: '1.0.0',
-        nodes,
-        edges
-      },
-      initialNetwork: JSON.parse(JSON.stringify({
-        version: '1.0.0',
-        nodes,
-        edges
-      })),
-      latestNetwork: null,
-      cyConfig: {},
-      editorConfig: {
-        lineType: 'taxi'
-      }
-    }
-  },
-  computed: {
-    formattedNetwork () {
-      return JSON.stringify(this.latestNetwork || this.networkValue, null, 2)
-    }
-  },
-  methods: {
-    handleNetworkChange ({ network }) {
-      this.latestNetwork = network
-    },
-    logNetwork () {
-      console.log('Current Network JSON:', this.latestNetwork || this.networkValue)
-    },
-    resetNetwork () {
-      const editorComponent = this.$refs.demoEditor
-      if (editorComponent && editorComponent.cyEditor) {
-        const snapshot = JSON.parse(JSON.stringify(this.initialNetwork))
-        editorComponent.cyEditor.loadNetwork(snapshot)
-        this.networkValue = snapshot
-      }
-    }
-  }
-<script>
-import cyEditor from './cyeditor.js'
 import { loadNetworks, resetNetwork, advanceTo } from '../src/api/networkService'
 
 export default {
@@ -212,6 +36,7 @@ export default {
     return {
       networkValue: {
         version: '1.0.0',
+        cycle: 0,
         nodes: [],
         edges: []
       },
@@ -220,7 +45,9 @@ export default {
       editorConfig: {
         lineType: 'taxi'
       },
-      advanceCycle: 100
+      advanceCycle: 100,
+      connected: false,
+      ws: null
     }
   },
   computed: {
@@ -229,9 +56,51 @@ export default {
     }
   },
   async mounted () {
-    await this.refreshNetwork()
+    await this.refreshNetwork() // Initial load
+    this.setupWebSocket()
+  },
+  beforeDestroy() {
+    if (this.ws) {
+      this.ws.close()
+    }
   },
   methods: {
+    setupWebSocket() {
+      // Assuming backend is at localhost:8081
+      const wsUrl = 'ws://localhost:8081/ws'
+      this.ws = new WebSocket(wsUrl)
+      
+      this.ws.onopen = () => {
+        console.log('WS Connected')
+        this.connected = true
+      }
+      
+      this.ws.onclose = () => {
+        console.log('WS Disconnected')
+        this.connected = false
+        // Try reconnect after 2s
+        setTimeout(() => this.setupWebSocket(), 2000)
+      }
+      
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          // data should be CyNetwork object
+          console.log('WS Update:', data)
+          this.networkValue = data
+          this.latestNetwork = data
+          
+          const editorComponent = this.$refs.demoEditor
+          if (editorComponent && editorComponent.cyEditor) {
+               // Reload only if needed or specific optimization.
+               // For CyEditor, loadNetwork is usually full reload.
+               editorComponent.cyEditor.loadNetwork(this.networkValue)
+          }
+        } catch (e) {
+          console.error('WS Message Error:', e)
+        }
+      }
+    },
     handleNetworkChange ({ network }) {
       this.latestNetwork = network
     },
@@ -256,7 +125,7 @@ export default {
     async resetNetwork () {
       try {
         await resetNetwork({})
-        await this.refreshNetwork()
+        // No need to manual refresh if WS is connected, but good to be safe
       } catch (e) {
          console.error('Reset failed', e)
       }
@@ -264,16 +133,15 @@ export default {
     async advanceSimulation () {
       try {
         await advanceTo(Number(this.advanceCycle))
-        await this.refreshNetwork()
+        // No need to manual refreshNetwork(), WS should handle it
       } catch (e) {
         console.error('Advance failed', e)
       }
     }
   }
 }
-
-
 </script>
+
 <style scoped lang="stylus">
   .demo-wrapper {
     width: 100%;

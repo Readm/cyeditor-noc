@@ -1,11 +1,24 @@
-// vue.config.js
-
-/**
- * @type {import('@vue/cli-service').ProjectOptions}
- */
 module.exports = {
-  // options...
-    devServer: {
-      disableHostCheck: true
+  devServer: {
+    disableHostCheck: true,
+    proxy: {
+      '/ws': {
+        target: 'http://localhost:8081',
+        ws: true,
+        changeOrigin: true
+      },
+      '/load_networks': {
+        target: 'http://localhost:8081',
+        changeOrigin: true
+      },
+      '/reset_network': {
+        target: 'http://localhost:8081',
+        changeOrigin: true
+      },
+      '/advance_to': {
+        target: 'http://localhost:8081',
+        changeOrigin: true
+      }
+    }
   }
 }

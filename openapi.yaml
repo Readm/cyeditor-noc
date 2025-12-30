@@ -278,6 +278,9 @@ components:
       properties:
         version:
           type: string
+        cycle:
+          type: integer
+          description: "Current simulation cycle"
         nodes:
           type: array
           items:
