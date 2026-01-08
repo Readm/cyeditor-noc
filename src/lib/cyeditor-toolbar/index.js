@@ -8,10 +8,10 @@ let defaults = {
   commands: [
     { command: 'undo', icon: 'icon-undo', disabled: true, title: utils.localize('toolbar-undo') },
     { command: 'redo', icon: 'icon-Redo', disabled: true, title: utils.localize('toolbar-redo') },
-    { command: 'layout-grid', icon: 'icon-grid', disabled: false, title: '网格布局', separator: true },
-    { command: 'layout-circle', icon: 'icon-fullscreen', disabled: false, title: '环形布局' },
-    { command: 'layout-concentric', icon: 'icon-fullscreen', disabled: false, title: '同心圆布局' },
-    { command: 'layout-breadthfirst', icon: 'icon-fullscreen', disabled: false, title: '广度优先布局' },
+    { command: 'layout-grid', icon: 'grid_view', disabled: false, title: '网格布局', separator: true },
+    { command: 'layout-circle', icon: 'data_usage', disabled: false, title: '环形布局' },
+    { command: 'layout-concentric', icon: 'radar', disabled: false, title: '同心圆布局' },
+    { command: 'layout-breadthfirst', icon: 'account_tree', disabled: false, title: '广度优先布局' },
     { command: 'zoomin', icon: 'icon-zoomin', disabled: false, title: utils.localize('toolbar-zoomin'), separator: true },
     { command: 'zoomout', icon: 'icon-zoom', disabled: false, title: utils.localize('toolbar-zoomout') },
     { command: 'boxselect', icon: 'icon-selection', disabled: false, title: utils.localize('toolbar-boxselect'), selected: false },
@@ -32,14 +32,14 @@ let defaults = {
   ]
 }
 class Toolbar {
-  constructor (cy, params) {
+  constructor(cy, params) {
     this.cy = cy
     this._init(params)
     this._listeners = {}
     this._initEvents()
   }
 
-  _init (params) {
+  _init(params) {
     this._options = Object.assign({}, defaults, params)
     if (Array.isArray(this._options.toolbar)) {
       this._options.commands = this._options.commands.filter(item => this._options.toolbar.indexOf(item.command) > -1)
@@ -48,7 +48,7 @@ class Toolbar {
     this._initShapePanel()
   }
 
-  _initEvents () {
+  _initEvents() {
     this._listeners.command = (e) => {
       let command = e.target.getAttribute('data-command')
       if (!command) { return }
@@ -71,12 +71,12 @@ class Toolbar {
     this.cy.on('select unselect', this._listeners.select)
   }
 
-  _selectChange () {
+  _selectChange() {
     let selected = this.cy.$(':selected')
     if (selected && selected.length !== this._last_selected_length) {
       let hasSelected = selected.length > 0
       this._options.commands.forEach(item => {
-        if ([ 'delete', 'copy', 'leveldown', 'levelup' ].indexOf(item.command) > -1) {
+        if (['delete', 'copy', 'leveldown', 'levelup'].indexOf(item.command) > -1) {
           item.disabled = !hasSelected
         }
       })
@@ -85,11 +85,11 @@ class Toolbar {
     this._last_selected_length = selected
   }
 
-  _initShapePanel () {
+  _initShapePanel() {
     let { _options } = this
     if (_options.container) {
       if (typeof _options.container === 'string') {
-        this._panel = utils.query(_options.container)[ 0 ]
+        this._panel = utils.query(_options.container)[0]
       } else if (utils.isNode(_options.container)) {
         this._panel = _options.container
       }
@@ -104,36 +104,47 @@ class Toolbar {
     this._panelHtml()
   }
 
-  _panelHtml () {
+  _panelHtml() {
     let icons = ''
     this._options.commands.forEach(({ command, title, icon, disabled, selected, separator }) => {
-      let cls = `${icon} ${disabled ? 'disable' : ''} ${selected === true ? 'selected' : ''}`
+      let cls = `${disabled ? 'disable' : ''} ${selected === true ? 'selected' : ''}`
       if (separator) icons += '<span class="separator"></span>'
-      icons += `<i data-command="${command}" class="iconfont command ${cls}" title="${title}"></i>`
+
+      if (icon && icon.startsWith('icon-')) {
+        icons += `<i data-command="${command}" class="iconfont command ${icon} ${cls}" title="${title}"></i>`
+      } else {
+        icons += `<span data-command="${command}" class="material-symbols-outlined command ${cls}" title="${title}">${icon}</span>`
+      }
     })
     this._panel.innerHTML = icons
   }
 
-  rerender (cmd, options = {}) {
+  rerender(cmd, options = {}) {
     let cmdItem = this._options.commands.find(it => it.command === cmd)
     let opt = Object.assign(cmdItem, options)
     if (opt) {
-      let iconEls = utils.query(`i[data-command=${cmd}]`)
+      let iconEls = this._panel.querySelectorAll(`[data-command="${cmd}"]`)
       iconEls.forEach(item => {
-        if (item.parentNode === this._panel) {
-          if (opt.icon) {
+        if (opt.icon) {
+          if (opt.icon.startsWith('icon-')) {
+            // Switch/Update to Legacy
             item.className = `iconfont command ${opt.icon}`
-          }
-          if (opt.disabled) {
-            utils.addClass(item, 'disable')
+            item.innerText = ''
           } else {
-            utils.removeClass(item, 'disable')
+            // Switch/Update to Material
+            item.className = `material-symbols-outlined command`
+            item.innerText = opt.icon
           }
-          if (opt.selected) {
-            utils.addClass(item, 'selected')
-          } else {
-            utils.removeClass(item, 'selected')
-          }
+        }
+        if (opt.disabled) {
+          utils.addClass(item, 'disable')
+        } else {
+          utils.removeClass(item, 'disable')
+        }
+        if (opt.selected) {
+          utils.addClass(item, 'selected')
+        } else {
+          utils.removeClass(item, 'selected')
         }
       })
     }
