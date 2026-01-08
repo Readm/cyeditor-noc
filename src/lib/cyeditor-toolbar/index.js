@@ -8,6 +8,10 @@ let defaults = {
   commands: [
     { command: 'undo', icon: 'icon-undo', disabled: true, title: utils.localize('toolbar-undo') },
     { command: 'redo', icon: 'icon-Redo', disabled: true, title: utils.localize('toolbar-redo') },
+    { command: 'layout-grid', icon: 'icon-grid', disabled: false, title: '网格布局', separator: true },
+    { command: 'layout-circle', icon: 'icon-fullscreen', disabled: false, title: '环形布局' },
+    { command: 'layout-concentric', icon: 'icon-fullscreen', disabled: false, title: '同心圆布局' },
+    { command: 'layout-breadthfirst', icon: 'icon-fullscreen', disabled: false, title: '广度优先布局' },
     { command: 'zoomin', icon: 'icon-zoomin', disabled: false, title: utils.localize('toolbar-zoomin'), separator: true },
     { command: 'zoomout', icon: 'icon-zoom', disabled: false, title: utils.localize('toolbar-zoomout') },
     { command: 'boxselect', icon: 'icon-selection', disabled: false, title: utils.localize('toolbar-boxselect'), selected: false },

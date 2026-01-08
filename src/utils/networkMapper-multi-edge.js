@@ -17,10 +17,10 @@ const pickPosition = (position = {}) => {
 
 // 🆕 生成包含端口信息的唯一边ID
 const buildEdgeDisplayId = (edge) => {
-  const src = edge.src_node_id != null ? edge.src_node_id : 0
-  const srcPort = edge.src_port_id != null ? edge.src_port_id : 0
-  const dst = edge.dst_node_id != null ? edge.dst_node_id : 0
-  const dstPort = edge.dst_port_id != null ? edge.dst_port_id : 0
+  const src = edge.src_node_id ?? 0
+  const srcPort = edge.src_port_id ?? 0
+  const dst = edge.dst_node_id ?? 0
+  const dstPort = edge.dst_port_id ?? 0
   return `edge-${src}-p${srcPort}-${dst}-p${dstPort}`
 }
 
@@ -88,8 +88,8 @@ const buildEdgeDisplayFromNetwork = (edge, nodeIdToDisplayId) => {
   }
 
   // 🆕 添加端口标签
-  const srcPort = edge.src_port_id != null ? edge.src_port_id : 0
-  const dstPort = edge.dst_port_id != null ? edge.dst_port_id : 0
+  const srcPort = edge.src_port_id ?? 0
+  const dstPort = edge.dst_port_id ?? 0
   data.label = `${srcPort}→${dstPort}`
   data.srcPort = srcPort
   data.dstPort = dstPort
@@ -289,8 +289,8 @@ export function displayToNetwork(displayState = {}, baseNetwork = {}) {
     if (!edge) {
       // 🆕 从ID解析端口信息
       const parsed = parseEdgeDisplayId(displayId)
-      let srcPort = data.srcPort != null ? data.srcPort : 0
-      let dstPort = data.dstPort != null ? data.dstPort : 0
+      let srcPort = data.srcPort ?? 0
+      let dstPort = data.dstPort ?? 0
 
       if (parsed) {
         srcPort = parsed.srcPort

@@ -1,6 +1,3 @@
-// 多链路支持版本的 networkMapper
-// 基于原 networkMapper.js,增加了对多条平行边的支持
-
 const DEFAULT_PAN = { x: 0, y: 0 }
 const DEFAULT_ZOOM = 1
 
@@ -15,30 +12,6 @@ const pickPosition = (position = {}) => {
   return { x, y }
 }
 
-// 🆕 生成包含端口信息的唯一边ID
-const buildEdgeDisplayId = (edge) => {
-  const src = edge.src_node_id != null ? edge.src_node_id : 0
-  const srcPort = edge.src_port_id != null ? edge.src_port_id : 0
-  const dst = edge.dst_node_id != null ? edge.dst_node_id : 0
-  const dstPort = edge.dst_port_id != null ? edge.dst_port_id : 0
-  return `edge-${src}-p${srcPort}-${dst}-p${dstPort}`
-}
-
-// 🆕 从边ID解析端口信息
-const parseEdgeDisplayId = (edgeId) => {
-  // 格式: "edge-0-p1-1-p2"
-  const parts = edgeId.split('-')
-  if (parts.length >= 5 && parts[0] === 'edge') {
-    return {
-      srcNodeId: parseInt(parts[1]) || 0,
-      srcPort: parseInt(parts[2].substring(1)) || 0,  // 去掉 'p' 前缀
-      dstNodeId: parseInt(parts[3]) || 0,
-      dstPort: parseInt(parts[4].substring(1)) || 0
-    }
-  }
-  return null
-}
-
 const buildNodeDisplayFromNetwork = (node) => {
   const display = Object.assign({}, node.display || {})
   const position = pickPosition(display.position)
@@ -49,8 +22,6 @@ const buildNodeDisplayFromNetwork = (node) => {
 
   // Custom: Copy rich backend data to data.custom for inspection
   data.custom = {
-    node_id: node.node_id,
-    node_name: node.node_name,
     in_ports: node.in_ports,
     out_ports: node.out_ports,
     cache: node.cache,
@@ -65,14 +36,12 @@ const buildNodeDisplayFromNetwork = (node) => {
   }
 }
 
-// 🔧 修改: 支持多条平行边
 const buildEdgeDisplayFromNetwork = (edge, nodeIdToDisplayId) => {
   const display = Object.assign({}, edge.display || {})
   const data = Object.assign({}, display.data || {})
   const position = pickPosition(display.position)
 
-  // 🆕 使用包含端口信息的唯一ID
-  const edgeId = buildEdgeDisplayId(edge)
+  const edgeId = data.id || (edge.edge_id != null ? String(edge.edge_id) : generateId('edge'))
   data.id = edgeId
 
   if (!data.source && edge.src_node_id != null) {
@@ -81,30 +50,14 @@ const buildEdgeDisplayFromNetwork = (edge, nodeIdToDisplayId) => {
   if (!data.target && edge.dst_node_id != null) {
     data.target = nodeIdToDisplayId.get(edge.dst_node_id) || String(edge.dst_node_id)
   }
-
-  // 🔧 改为 bezier 以支持平行边可视化
   if (!data.lineType) {
     data.lineType = 'bezier'
   }
 
-  // 🆕 添加端口标签
-  const srcPort = edge.src_port_id != null ? edge.src_port_id : 0
-  const dstPort = edge.dst_port_id != null ? edge.dst_port_id : 0
-  data.label = `${srcPort}→${dstPort}`
-  data.srcPort = srcPort
-  data.dstPort = dstPort
-
   // Custom: Copy rich backend data
   data.custom = {
-    edge_id: edge.edge_id,
-    src_node_id: edge.src_node_id,
-    dst_node_id: edge.dst_node_id,
-    src_port_id: srcPort,
-    dst_port_id: dstPort,
-    latency: edge.latency,
-    bandwidth: edge.bandwidth,
     packet_types: edge.packet_types,
-    link_status: edge.link_status
+    link_status: display.link_status
   }
 
   return {
@@ -137,14 +90,6 @@ const buildEdgeDisplayFromCy = (displayEdge) => {
       lineType: data.lineType || 'bezier'
     },
     position
-  }
-
-  // 🆕 保存端口信息
-  if (data.srcPort != null) {
-    display.data.srcPort = data.srcPort
-  }
-  if (data.dstPort != null) {
-    display.data.dstPort = data.dstPort
   }
 
   if (displayEdge.link_status) {
@@ -184,13 +129,12 @@ const createDefaultNode = (nodeId) => ({
   display: {}
 })
 
-// 🔧 修改: 支持端口参数
-const createDefaultEdge = (edgeId, srcNodeId, dstNodeId, srcPort = 0, dstPort = 0) => ({
+const createDefaultEdge = (edgeId, srcNodeId, dstNodeId) => ({
   edge_id: edgeId,
   src_node_id: srcNodeId || 0,
-  src_port_id: srcPort,
+  src_port_id: 0,
   dst_node_id: dstNodeId || 0,
-  dst_port_id: dstPort,
+  dst_port_id: 0,
   packet_types: [],
   display: {}
 })
@@ -208,10 +152,7 @@ const sanitizeEdgeDisplay = (edge) => {
   const display = Object.assign({}, edge.display || {})
   display.data = Object.assign({}, display.data || {})
   display.position = pickPosition(display.position)
-
-  // 🆕 使用端口信息生成ID
-  display.data.id = buildEdgeDisplayId(edge)
-
+  display.data.id = display.data.id || (edge.edge_id != null ? String(edge.edge_id) : generateId('edge'))
   return display
 }
 
@@ -223,7 +164,6 @@ const getNextNumericId = (usedIds, start = 1) => {
   return candidate
 }
 
-// 🔧 修改: 支持多条平行边
 export function displayToNetwork(displayState = {}, baseNetwork = {}) {
   const network = deepClone(baseNetwork)
   network.nodes = ensureArray(network.nodes)
@@ -270,7 +210,6 @@ export function displayToNetwork(displayState = {}, baseNetwork = {}) {
     }
   })
 
-  // 🔧 修改: 每条边都有唯一ID,不会合并
   const edgeByDisplayId = new Map()
   const usedEdgeIds = new Set(network.edges.map(edge => edge.edge_id))
 
@@ -287,23 +226,7 @@ export function displayToNetwork(displayState = {}, baseNetwork = {}) {
     let edge = edgeByDisplayId.get(displayId)
 
     if (!edge) {
-      // 🆕 从ID解析端口信息
-      const parsed = parseEdgeDisplayId(displayId)
-      let srcPort = data.srcPort != null ? data.srcPort : 0
-      let dstPort = data.dstPort != null ? data.dstPort : 0
-
-      if (parsed) {
-        srcPort = parsed.srcPort
-        dstPort = parsed.dstPort
-      }
-
-      // 🆕 从 custom 数据获取端口信息(优先级更高)
-      if (data.custom) {
-        if (data.custom.src_port_id != null) srcPort = data.custom.src_port_id
-        if (data.custom.dst_port_id != null) dstPort = data.custom.dst_port_id
-      }
-
-      edge = createDefaultEdge(nextEdgeId, 0, 0, srcPort, dstPort)
+      edge = createDefaultEdge(nextEdgeId)
       nextEdgeId++
       network.edges.push(edge)
       edgeByDisplayId.set(displayId, edge)
@@ -330,21 +253,6 @@ export function displayToNetwork(displayState = {}, baseNetwork = {}) {
     if (targetNode) {
       edge.dst_node_id = targetNode.node_id
     }
-
-    // 🆕 保存端口信息
-    if (data.srcPort != null) {
-      edge.src_port_id = data.srcPort
-    }
-    if (data.dstPort != null) {
-      edge.dst_port_id = data.dstPort
-    }
-
-    // 🆕 从 custom 数据同步其他属性
-    if (data.custom) {
-      if (data.custom.latency != null) edge.latency = data.custom.latency
-      if (data.custom.bandwidth != null) edge.bandwidth = data.custom.bandwidth
-      if (data.custom.packet_types) edge.packet_types = data.custom.packet_types
-    }
   })
 
   network.zoom = displayState.zoom || network.zoom || DEFAULT_ZOOM
@@ -355,7 +263,6 @@ export function displayToNetwork(displayState = {}, baseNetwork = {}) {
 
 export default {
   networkToDisplay,
-  displayToNetwork,
-  buildEdgeDisplayId,
-  parseEdgeDisplayId
+  displayToNetwork
 }
+

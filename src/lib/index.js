@@ -635,9 +635,80 @@ class CyEditor extends EventBus {
         this.cy.userPanningEnabled(!item.selected)
         this.cy.boxSelectionEnabled(item.selected)
         break
+      case 'layout-grid':
+        this.applyLayout('grid')
+        break
+      case 'layout-circle':
+        this.applyLayout('circle')
+        break
+      case 'layout-concentric':
+        this.applyLayout('concentric')
+        break
+      case 'layout-breadthfirst':
+        this.applyLayout('breadthfirst')
+        break
       default:
         break
     }
+  }
+
+  applyLayout (layoutName) {
+    const layoutConfigs = {
+      grid: {
+        name: 'grid',
+        padding: 50,
+        avoidOverlap: true,
+        avoidOverlapPadding: 10,
+        condense: false,
+        rows: undefined,
+        cols: undefined
+      },
+      circle: {
+        name: 'circle',
+        padding: 50,
+        avoidOverlap: true,
+        radius: undefined,
+        startAngle: 3 / 2 * Math.PI,
+        sweep: undefined,
+        clockwise: true
+      },
+      concentric: {
+        name: 'concentric',
+        padding: 50,
+        avoidOverlap: true,
+        minNodeSpacing: 50,
+        concentric: function (node) {
+          return node.degree()
+        },
+        levelWidth: function (nodes) {
+          return 2
+        }
+      },
+      breadthfirst: {
+        name: 'breadthfirst',
+        padding: 50,
+        avoidOverlap: true,
+        directed: false,
+        circle: false,
+        grid: false,
+        spacingFactor: 1.5
+      }
+    }
+
+    const config = layoutConfigs[layoutName]
+    if (!config) {
+      console.error('Unknown layout:', layoutName)
+      return
+    }
+
+    console.log('Applying layout:', layoutName)
+    const layout = this.cy.layout(config)
+    layout.run()
+
+    // 布局完成后触发 network-change 事件以保存位置
+    setTimeout(() => {
+      this._syncNetworkFromDisplay('layout-applied')
+    }, 500)
   }
 
   _changeUndoRedo() {

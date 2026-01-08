@@ -18,11 +18,22 @@
       <div v-else style="color: red; margin-left: 10px; align-self: center;">○ WS Disconnected</div>
 
       <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
+        <select v-model="selectedExample" style="min-width: 150px;">
+          <option value="">-- 选择示例网络 --</option>
+          <option value="ring_4node.json">环形网络 (4节点)</option>
+          <option value="ring_8node.json">环形网络 (8节点)</option>
+          <option value="ring_16node.json">环形网络 (16节点)</option>
+          <option value="multi_edge_demo.json">多边示例 (2节点)</option>
+        </select>
+        <button @click="loadExampleNetwork" :disabled="!selectedExample">加载示例</button>
+      </span>
+
+      <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
         <select v-model="presetName">
           <option value="bi_ring">Bi-Ring</option>
         </select>
         <input type="number" v-model.number="presetNodes" style="width: 50px" title="Nodes" />
-        <button @click="loadPresetNetwork">Load Preset</button>
+        <button @click="loadPresetNetwork">动态生成</button>
       </span>
     </div>
     <cy-editor
@@ -110,7 +121,8 @@ export default {
       presetName: 'bi_ring',
       presetNodes: 16,
       showLogModal: false,
-      selectedData: null
+      selectedData: null,
+      selectedExample: ''
     }
   },
   computed: {
@@ -150,17 +162,18 @@ export default {
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          // data should be CyNetwork object
-          console.log('WS Update:', data)
+          console.log('WS Update - cycle:', data.cycle)
+
+          // 更新数据但不重新加载网络（避免重置位置）
           this.networkValue = data
           this.latestNetwork = data
 
-          const editorComponent = this.$refs.demoEditor
-          if (editorComponent && editorComponent.cyEditor) {
-            // Reload only if needed or specific optimization.
-            // For CyEditor, loadNetwork is usually full reload.
-            editorComponent.cyEditor.loadNetwork(this.networkValue)
-          }
+          // 不调用 loadNetwork，只更新必要的状态数据
+          // loadNetwork 会重置所有节点位置，我们应该避免这样做
+          // const editorComponent = this.$refs.demoEditor
+          // if (editorComponent && editorComponent.cyEditor) {
+          //   editorComponent.cyEditor.loadNetwork(this.networkValue)
+          // }
         } catch (e) {
           console.error('WS Message Error:', e)
         }
@@ -243,6 +256,40 @@ export default {
       } catch (e) {
         console.error('Load preset failed', e)
         alert('Load preset failed: ' + e.message)
+      }
+    },
+    async loadExampleNetwork () {
+      try {
+        if (!this.selectedExample) {
+          alert('请先选择一个示例网络')
+          return
+        }
+
+        console.log(`Loading example: ${this.selectedExample}`)
+
+        // 直接从本地文件加载 JSON
+        const response = await fetch(`/${this.selectedExample}`)
+        if (!response.ok) {
+          throw new Error(`Failed to load example: ${response.statusText}`)
+        }
+
+        const exampleNetwork = await response.json()
+        console.log('Loaded example network:', exampleNetwork)
+
+        // 更新本地显示
+        this.networkValue = exampleNetwork
+        this.latestNetwork = exampleNetwork
+
+        // 更新 CyEditor 显示
+        const editorComponent = this.$refs.demoEditor
+        if (editorComponent && editorComponent.cyEditor) {
+          editorComponent.cyEditor.loadNetwork(exampleNetwork)
+        }
+
+        console.log('✓ 示例网络加载成功，点击 "Build & Deploy" 以部署到后端')
+      } catch (e) {
+        console.error('Load example failed', e)
+        alert('加载示例失败: ' + e.message)
       }
     },
     handleSelect (data) {

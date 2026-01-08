@@ -10,7 +10,12 @@ const defaultEdgeStyles = [
     style: {
       'curve-style': 'bezier',
       'target-arrow-shape': 'triangle',
-      'width': 2
+      'width': 2,
+      'control-point-step-size': 40,  // 🆕 平行边偏移距离
+      'label': 'data(label)',           // 🆕 显示端口标签
+      'font-size': '10px',
+      'text-rotation': 'autorotate',
+      'text-margin-y': -10
     }
   },
   {
