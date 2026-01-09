@@ -104,6 +104,14 @@ const puppeteer = require('puppeteer');
             await page.waitForSelector('.property-section .property-panel', { timeout: 10000 });
             console.log('SUCCESS: Property Panel appeared in sidebar!');
 
+            // Verify JSON Editor existence
+            const editorExists = await page.waitForSelector('.jsoneditor', { timeout: 5000 }).then(() => true).catch(() => false);
+            if (editorExists) {
+                console.log('SUCCESS: JSON Editor component found!');
+            } else {
+                throw new Error('JSON Editor component NOT found in property panel');
+            }
+
             // Verify Sidebar Toggle
             console.log('Testing Sidebar toggle...');
             await page.click('.toggle-btn');
@@ -124,12 +132,12 @@ const puppeteer = require('puppeteer');
             await new Promise(r => setTimeout(r, 500));
 
             // Take success screenshot
-            await page.screenshot({ path: 'tests/e2e/layout_verification.png' });
-            console.log('Screenshot saved to tests/e2e/layout_verification.png');
+            await page.screenshot({ path: 'web_dev/tests/e2e/layout_verification.png' });
+            console.log('Screenshot saved to web_dev/tests/e2e/layout_verification.png');
 
         } catch (e) {
             console.error('FAILURE: Property Panel check failed.');
-            await page.screenshot({ path: 'tests/e2e/layout_failure.png' });
+            await page.screenshot({ path: 'web_dev/tests/e2e/layout_failure.png' });
             throw e;
         }
 

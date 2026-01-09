@@ -55,6 +55,7 @@
     "license": "ISC",
     "dependencies": {
         "cytoscape": "^3.7.0",
+        "jsoneditor": "^10.4.2",
         "vue-json-viewer": "^2.2.22"
     },
     "devDependencies": {
