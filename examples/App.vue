@@ -181,24 +181,31 @@ export default {
       // Load initial network
       await this.refreshNetwork() 
       
-      // Expose cy instance for E2E testing
-      // Wait another tick for cyReader to mount
-      this.$nextTick(() => {
-        const editor = this.$refs.demoEditor
-        if (editor && editor.cyEditor) {
-          window.cy = editor.cyEditor.cy
-          window.app = this
-          console.log('E2E: window.cy and window.app exposed for automated testing')
-        }
-      })
+      // Expose cy instance for E2E testing (Robust polling)
+      this.exposeCyForTest()
     })
   },
   beforeDestroy () {
     if (this.ws) {
       this.ws.close()
     }
+    window.removeEventListener('resize', this.resizeEditor)
   },
   methods: {
+    exposeCyForTest (attempts = 20) {
+      if (attempts <= 0) {
+        console.warn('E2E: Failed to expose window.cy after multiple attempts')
+        return
+      }
+      const editor = this.$refs.demoEditor
+      if (editor && editor.cyEditor && editor.cyEditor.cy) {
+        window.cy = editor.cyEditor.cy
+        window.app = this
+        console.log('E2E: window.cy and window.app exposed for automated testing')
+      } else {
+        setTimeout(() => this.exposeCyForTest(attempts - 1), 500)
+      }
+    },
     setupWebSocket () {
       // Use proxy: connect to same host/port as the web page
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'

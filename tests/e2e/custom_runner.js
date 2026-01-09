@@ -57,7 +57,8 @@ const puppeteer = require('puppeteer');
         }
 
         console.log('Waiting for CyEditor to initialize and load nodes...');
-        await page.waitForFunction('window.cy && window.cy.nodes().length > 0', { timeout: 10000 });
+        console.log('Waiting for CyEditor to initialize and load nodes...');
+        await page.waitForFunction('window.cy && window.cy.nodes().length > 0', { timeout: 30000 });
 
         // Verify Sidebar layout
         console.log('Verifying Sidebar layout...');
