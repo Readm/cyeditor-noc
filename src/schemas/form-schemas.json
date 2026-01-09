@@ -1,0 +1,241 @@
+{
+  "nodeBasic": {
+    "groups": [
+      {
+        "legend": "Node Basic Info",
+        "fields": [
+          {
+            "model": "node_id",
+            "label": "Node Id",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "hint": "节点唯一标识符"
+          },
+          {
+            "model": "node_name",
+            "label": "Node Name",
+            "required": true,
+            "type": "input",
+            "inputType": "text",
+            "hint": "节点名称"
+          },
+          {
+            "model": "node_features",
+            "label": "Node Features",
+            "required": false,
+            "type": "array",
+            "hint": "节点特性列表，如 ['cpu', 'cache']"
+          },
+          {
+            "model": "coherence_domain_id",
+            "label": "Coherence Domain Id",
+            "required": false,
+            "type": "input",
+            "inputType": "number",
+            "hint": "一致性域 ID"
+          }
+        ]
+      }
+    ]
+  },
+  "cache": {
+    "groups": [
+      {
+        "legend": "Cache Configuration",
+        "fields": [
+          {
+            "model": "capacity",
+            "label": "Capacity",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "min": 0,
+            "hint": "缓存容量（字节）"
+          },
+          {
+            "model": "num_sets",
+            "label": "Num Sets",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "min": 0,
+            "hint": "缓存组数"
+          },
+          {
+            "model": "replacement_policy",
+            "label": "Replacement Policy",
+            "required": true,
+            "type": "select",
+            "values": [
+              "LRU",
+              "FIFO",
+              "Random",
+              "LFU"
+            ],
+            "hint": "替换策略"
+          },
+          {
+            "model": "states",
+            "label": "States",
+            "required": true,
+            "type": "input",
+            "inputType": "text",
+            "hint": "一致性状态协议"
+          }
+        ]
+      }
+    ]
+  },
+  "directory": {
+    "groups": [
+      {
+        "legend": "Directory Configuration",
+        "fields": [
+          {
+            "model": "capacity",
+            "label": "Capacity",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "min": 0
+          },
+          {
+            "model": "num_sets",
+            "label": "Num Sets",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "min": 0
+          },
+          {
+            "model": "replacement_policy",
+            "label": "Replacement Policy",
+            "required": true,
+            "type": "input",
+            "inputType": "text"
+          },
+          {
+            "model": "states",
+            "label": "States",
+            "required": true,
+            "type": "input",
+            "inputType": "text"
+          }
+        ]
+      }
+    ]
+  },
+  "edge": {
+    "groups": [
+      {
+        "legend": "Edge Configuration",
+        "fields": [
+          {
+            "model": "edge_id",
+            "label": "Edge Id",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "hint": "边唯一标识符"
+          },
+          {
+            "model": "src_node_id",
+            "label": "Src Node Id",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "hint": "源节点 ID"
+          },
+          {
+            "model": "dst_node_id",
+            "label": "Dst Node Id",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "hint": "目标节点 ID"
+          },
+          {
+            "model": "src_port_id",
+            "label": "Src Port Id",
+            "required": false,
+            "type": "input",
+            "inputType": "number",
+            "hint": "源端口 ID"
+          },
+          {
+            "model": "dst_port_id",
+            "label": "Dst Port Id",
+            "required": false,
+            "type": "input",
+            "inputType": "number",
+            "hint": "目标端口 ID"
+          },
+          {
+            "model": "latency",
+            "label": "Latency",
+            "required": false,
+            "type": "input",
+            "inputType": "number",
+            "hint": "链路延迟（周期）"
+          },
+          {
+            "model": "bandwidth",
+            "label": "Bandwidth",
+            "required": false,
+            "type": "input",
+            "inputType": "number",
+            "hint": "链路带宽"
+          },
+          {
+            "model": "packet_types",
+            "label": "Packet Types",
+            "required": false,
+            "type": "array",
+            "hint": "支持的包类型"
+          }
+        ]
+      }
+    ]
+  },
+  "port": {
+    "groups": [
+      {
+        "legend": "Port Configuration",
+        "fields": [
+          {
+            "model": "port_id",
+            "label": "Port Id",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "hint": "端口 ID"
+          },
+          {
+            "model": "bandwidth",
+            "label": "Bandwidth",
+            "required": true,
+            "type": "input",
+            "inputType": "number",
+            "hint": "带宽（配置）"
+          },
+          {
+            "model": "buffer_size",
+            "label": "Buffer Size",
+            "required": false,
+            "type": "input",
+            "inputType": "number",
+            "hint": "缓冲区大小（配置）"
+          },
+          {
+            "model": "packet_types",
+            "label": "Packet Types",
+            "required": false,
+            "type": "array",
+            "hint": "支持的包类型"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,72 +1,104 @@
 <template>
-  <div class="demo-wrapper">
-    <div class="demo-actions">
-      <button @click="resetNetwork">Reset</button>
-      <button @click="buildNetwork" style="background-color: #e6f7ff; border-color: #1890ff; color: #1890ff;">Build & Deploy</button>
+  <div class="app-layout">
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <div class="demo-actions">
+        <button @click="resetNetwork">Reset</button>
+        <button @click="buildNetwork" style="background-color: #e6f7ff; border-color: #1890ff; color: #1890ff;">Build & Deploy</button>
 
-      <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px;">
-        <button @click="toggleMode" style="font-size: 12px; min-width: 90px;">
-          {{ advanceMode === 'step' ? 'Mode: Step' : 'Mode: Target' }} ↻
-        </button>
-        <input type="number" v-model="advanceCycle" style="width: 70px" />
-        <button @click="advanceSimulation">
-          {{ advanceMode === 'step' ? 'Step' : 'Advance To' }}
-        </button>
-      </span>
+        <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px;">
+          <button @click="toggleMode" style="font-size: 12px; min-width: 90px;">
+            {{ advanceMode === 'step' ? 'Mode: Step' : 'Mode: Target' }} ↻
+          </button>
+          <input type="number" v-model="advanceCycle" style="width: 70px" />
+          <button @click="advanceSimulation">
+            {{ advanceMode === 'step' ? 'Step' : 'Advance To' }}
+          </button>
+        </span>
 
-      <div v-if="connected" style="color: green; margin-left: 10px; align-self: center;">● WS Connected</div>
-      <div v-else style="color: red; margin-left: 10px; align-self: center;">○ WS Disconnected</div>
+        <div v-if="connected" style="color: green; margin-left: 10px; align-self: center;">● WS Connected</div>
+        <div v-else style="color: red; margin-left: 10px; align-self: center;">○ WS Disconnected</div>
 
-      <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
-        <select v-model="selectedExample" style="min-width: 150px;">
-          <option value="">-- 选择示例网络 --</option>
-          <option value="ring_4node.json">环形网络 (4节点)</option>
-          <option value="ring_8node.json">环形网络 (8节点)</option>
-          <option value="ring_16node.json">环形网络 (16节点)</option>
-          <option value="multi_edge_demo.json">多边示例 (2节点)</option>
-        </select>
-        <button @click="loadExampleNetwork" :disabled="!selectedExample">加载示例</button>
-      </span>
+        <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
+          <select v-model="selectedExample" style="min-width: 150px;">
+            <option value="">-- 选择示例网络 --</option>
+            <option value="ring_4node.json">环形网络 (4节点)</option>
+            <option value="ring_8node.json">环形网络 (8节点)</option>
+            <option value="ring_16node.json">环形网络 (16节点)</option>
+            <option value="multi_edge_demo.json">多边示例 (2节点)</option>
+          </select>
+          <button @click="loadExampleNetwork" :disabled="!selectedExample">加载示例</button>
+        </span>
 
-      <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
-        <select v-model="presetName">
-          <option value="bi_ring">Bi-Ring</option>
-        </select>
-        <input type="number" v-model.number="presetNodes" style="width: 50px" title="Nodes" />
-        <button @click="loadPresetNetwork">动态生成</button>
-      </span>
+        <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
+          <select v-model="presetName">
+            <option value="bi_ring">Bi-Ring</option>
+          </select>
+          <input type="number" v-model.number="presetNodes" style="width: 50px" title="Nodes" />
+          <button @click="loadPresetNetwork">动态生成</button>
+        </span>
+      </div>
+
+      <cy-editor
+        v-if="appMounted"
+        ref="demoEditor"
+        class="cy-editor"
+        :network="networkValue"
+        :cy-config="cyConfig"
+        :editor-config="editorConfig"
+        @network-change="handleNetworkChange"
+        @show-json="logNetwork"
+        @select="handleSelect"
+        @unselect="handleUnselect"
+      />
+
+      <div class="network-preview">
+        <div class="preview-title">实时 Network JSON</div>
+        <json-viewer
+          :value="latestNetwork || networkValue"
+          :expand-depth="1"
+          boxed
+          sort
+        ></json-viewer>
+      </div>
     </div>
-    <cy-editor
-      ref="demoEditor"
-      class="cy-editor"
-      :network="networkValue"
-      :cy-config="cyConfig"
-      :editor-config="editorConfig"
-      @network-change="handleNetworkChange"
-      @show-json="logNetwork"
-      @select="handleSelect"
-      @unselect="handleUnselect"
-    />
-    
-    <!-- Inspector Panel -->
-    <div v-if="selectedData" class="inspector-panel">
-      <div class="preview-title">Element Info</div>
-      <json-viewer
-        :value="selectedData"
-        :expand-depth="2"
-        boxed
-        sort
-      ></json-viewer>
-    </div>
 
-    <div class="network-preview">
-      <div class="preview-title">实时 Network JSON</div>
-      <json-viewer
-        :value="latestNetwork || networkValue"
-        :expand-depth="1"
-        boxed
-        sort
-      ></json-viewer>
+    <!-- Right Sidebar -->
+    <div class="right-sidebar" :class="{ collapsed: sidebarCollapsed }">
+      <div class="sidebar-header">
+        <span v-if="!sidebarCollapsed" class="sidebar-title">Navigator & Properties</span>
+        <button class="toggle-btn" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? 'Expand' : 'Collapse'">
+          {{ sidebarCollapsed ? '◀' : '▶' }}
+        </button>
+      </div>
+
+      <div class="sidebar-content" v-show="!sidebarCollapsed">
+        <div class="navigator-section">
+          <!-- Cytoscape Navigator will be injected here -->
+          <div id="navigator-container"></div>
+        </div>
+
+        <div class="property-section">
+          <div v-if="selectedElement">
+            <node-property-panel
+              v-if="selectedElement.group === 'nodes'"
+              :node-data="selectedElement.data"
+              @save="handlePropertySave"
+              @cancel="handlePropertyCancel"
+            />
+            <edge-property-panel
+              v-else-if="selectedElement.group === 'edges'"
+              :edge-data="selectedElement.data"
+              @save="handlePropertySave"
+              @cancel="handlePropertyCancel"
+            />
+          </div>
+          <div v-else class="empty-state">
+            <div class="empty-icon">👆</div>
+            <div>Select a node or edge to view properties</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modal for Full JSON Log -->
@@ -93,12 +125,16 @@
 import cyEditor from './cyeditor.js'
 import { loadNetworks, resetNetwork, advanceTo, addNetwork, loadPreset } from '../src/api/networkService'
 import JsonViewer from 'vue-json-viewer'
+import NodePropertyPanel from '../src/components/NodePropertyPanel.vue'
+import EdgePropertyPanel from '../src/components/EdgePropertyPanel.vue'
 
 export default {
   name: 'App',
   components: {
     cyEditor,
-    JsonViewer
+    JsonViewer,
+    NodePropertyPanel,
+    EdgePropertyPanel
   },
   data () {
     return {
@@ -112,8 +148,11 @@ export default {
       cyConfig: {},
       editorConfig: {
         lineType: 'taxi',
-        elementsInfo: false // Disable default panel in favor of our custom one
+        elementsInfo: false, // Disable default panel in favor of our custom one
+        navigator: true,
+        navigatorContainer: '#navigator-container' // Render navigator in our sidebar
       },
+      sidebarCollapsed: false,
       advanceCycle: 100,
       advanceMode: 'step',
       connected: false,
@@ -122,7 +161,9 @@ export default {
       presetNodes: 16,
       showLogModal: false,
       selectedData: null,
-      selectedExample: ''
+      selectedExample: '',
+      selectedElement: null, // { group: 'nodes'|'edges', data: {...}, cyElement: ... }
+      appMounted: false
     }
   },
   computed: {
@@ -131,8 +172,26 @@ export default {
     }
   },
   async mounted () {
-    await this.refreshNetwork() // Initial load
     this.setupWebSocket()
+    
+    // Delay rendering CyEditor until DOM (including sidebar) is ready
+    this.$nextTick(async () => {
+      this.appMounted = true // Trigger v-if for cy-editor
+      
+      // Load initial network
+      await this.refreshNetwork() 
+      
+      // Expose cy instance for E2E testing
+      // Wait another tick for cyReader to mount
+      this.$nextTick(() => {
+        const editor = this.$refs.demoEditor
+        if (editor && editor.cyEditor) {
+          window.cy = editor.cyEditor.cy
+          window.app = this
+          console.log('E2E: window.cy and window.app exposed for automated testing')
+        }
+      })
+    })
   },
   beforeDestroy () {
     if (this.ws) {
@@ -293,35 +352,91 @@ export default {
       }
     },
     handleSelect (data) {
-      if (data && data.custom) {
-        // Merge top-level important fields with custom rich data
-        this.selectedData = {
-          id: data.id,
-          name: data.name,
-          ...data.custom
-        }
-      } else {
-        this.selectedData = data
-      }
+       this.selectedData = data
+       
+       if (data) {
+         // Get Cytoscape data (merge custom if exists, otherwise full data)
+         const customData = data.custom || data
+         
+         // Get Cytoscape element for property editing
+         const editorComponent = this.$refs.demoEditor
+         if (editorComponent && editorComponent.cyEditor) {
+           const cy = editorComponent.cyEditor.cy
+           const cyElement = cy.getElementById(data.id)
+           
+           if (cyElement && cyElement.length > 0) {
+             // Store cyElement non-reactively to avoid circular structure hang in Vue Observer
+             this._selectedCyElement = cyElement
+             
+             this.selectedElement = {
+               group: cyElement.group(), // 'nodes' or 'edges'
+               data: customData,
+               displayId: data.id
+             }
+           }
+         }
+       }
     },
     handleUnselect () {
       this.selectedData = null
+      this.selectedElement = null
+      this._selectedCyElement = null
+    },
+    handlePropertySave (updatedData) {
+      console.log('Property saved:', updatedData)
+
+      if (!this.selectedElement || !this._selectedCyElement) return
+
+      // Update cytoscape element's custom data
+      const cyElement = this._selectedCyElement
+      cyElement.data('custom', updatedData)
+      
+      // Trigger network change event to update latestNetwork
+      const editorComponent = this.$refs.demoEditor
+      if (editorComponent && editorComponent.cyEditor) {
+        // 手动触发 network-change 事件
+        editorComponent.cyEditor.emitNetworkChange()
+      }
+
+      // Update selectedElement data
+      this.selectedElement.data = updatedData
+
+      console.log('✓ Properties updated in Cytoscape')
+    },
+    handlePropertyCancel () {
+      console.log('Property edit cancelled')
+      // Do nothing, form component will reset internally
     }
   }
 }
 </script>
 
 <style scoped lang="stylus">
-  .demo-wrapper {
-    width: 100%;
+  .app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  .main-content {
+    flex: 1;
     display: flex;
     flex-direction: column;
+    padding: 16px;
+    background: #f5f5f5;
+    overflow-y: auto;
     gap: 16px;
   }
 
   .demo-actions {
     display: flex;
     gap: 12px;
+    flex-wrap: wrap;
+    background: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #eaeaea;
   }
 
   .demo-actions button {
@@ -330,9 +445,114 @@ export default {
   }
 
   .cy-editor {
-    width: 100%;
-    height: 600px;
+    flex: 1;
+    min-height: 500px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 4px;
     position: relative;
+  }
+
+  /* Sidebar Styles */
+  .right-sidebar {
+    width: 350px;
+    background: #fff;
+    border-left: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    flex-shrink: 0;
+    box-shadow: -2px 0 6px rgba(0,0,0,0.05);
+    z-index: 100;
+  }
+
+  .right-sidebar.collapsed {
+    width: 40px;
+  }
+
+  .sidebar-header {
+    height: 48px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: #fafafa;
+  }
+  
+  .right-sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .sidebar-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: #888;
+    padding: 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+  .toggle-btn:hover {
+    background: #eee;
+    color: #1890ff;
+  }
+
+  .sidebar-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .navigator-section {
+    height: 200px; /* Fixed height for navigator */
+    border-bottom: 1px solid #eee;
+    position: relative;
+    background: #fdfdfd;
+  }
+  
+  #navigator-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  
+
+  .property-section {
+    flex: 1;
+    overflow-y: auto; /* Scroll property panel internally */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 13px;
+    padding: 30px;
+    text-align: center;
+    background: #fcfcfc;
+  }
+  
+  .empty-icon {
+    font-size: 24px;
+    margin-bottom: 12px;
+    opacity: 0.5;
   }
 
   .network-preview {
@@ -341,26 +561,12 @@ export default {
     padding: 12px;
     background: #fff;
     min-height: 100px;
-  }
-
-  .inspector-panel {
-    position: absolute;
-    top: 60px; /* Below actions */
-    right: 20px;
-    width: 300px;
-    background: white;
-    box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-    border: 1px solid #eee;
-    padding: 10px;
-    border-radius: 4px;
-    max-height: 500px;
-    overflow-y: auto;
-    z-index: 900;
+    /* max-height: 200px;  Let main column scroll handle it */
   }
 
   .network-preview pre {
     margin: 0;
-    max-height: 200px;
+    max-height: 150px;
     overflow: auto;
     font-size: 12px;
   }
@@ -368,6 +574,8 @@ export default {
   .preview-title {
     font-weight: bold;
     margin-bottom: 8px;
+    font-size: 12px;
+    color: #666;
   }
 
   .modal-overlay {
@@ -404,4 +612,30 @@ export default {
     overflow-y: auto;
     flex: 1;
   }
+</style>
+
+<style>
+/* Global override for Cytoscape Navigator Plugin */
+/* Must be non-scoped because the plugin elements are appended dynamically */
+#navigator-container .cytoscape-navigator {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important; /* Ensure container matches */
+  z-index: 1 !important;
+  box-shadow: none !important;
+}
+#navigator-container .cytoscape-navigator canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+}
 </style>

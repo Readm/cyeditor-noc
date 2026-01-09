@@ -19,14 +19,16 @@
         "diagram"
     ],
     "scripts": {
-        "serve": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve examples/main.js",
+        "serve": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
         "build": "vue-cli-service build --target lib --name cyeditor src/index.js",
+        "build:app": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build --mode production",
         "lint": "vue-cli-service lint --fix",
         "docs:dev": "vuepress dev docs",
         "docs:build": "vuepress build docs",
         "test": "jest",
         "test:watch": "jest --watch",
         "test:coverage": "jest --coverage",
+        "test:e2e": "node tests/e2e/custom_runner.js",
         "precommit": "lint-staged",
         "deploy": "./deploy.sh"
     },
@@ -70,6 +72,7 @@
         "jest": "^26.6.3",
         "jest-environment-jsdom": "^26.6.2",
         "openapi-typescript": "^7.10.1",
+        "puppeteer": "^24.34.0",
         "stylus": "^0.54.5",
         "stylus-loader": "^3.0.2",
         "vue": "^2.6.10",

@@ -206,13 +206,13 @@ class CyEditor extends EventBus {
   }
 
   _initDom() {
-    let { dragAddNodes, navigator, elementsInfo, toolbar, container } = this.editorOptions
+    let { dragAddNodes, navigator, navigatorContainer, elementsInfo, toolbar, container } = this.editorOptions
     let left = dragAddNodes ? `<div class="left"></div>` : ''
-    let navigatorDom = navigator ? `<div class="panel-title">${utils.localize('window-navigator')}</div><div id="thumb"></div>` : ''
+    let navigatorDom = (navigator && !navigatorContainer) ? `<div class="panel-title">${utils.localize('window-navigator')}</div><div id="thumb"></div>` : ''
     let infoDom = elementsInfo ? `<div id="info"></div>` : ''
     let domHtml = toolbar ? '<div id="toolbar"></div>' : ''
     let right = ''
-    if (navigator || elementsInfo) {
+    if ((navigator && !navigatorContainer) || elementsInfo) {
       right = `<div class="right">
                 ${navigatorDom}
                 ${infoDom}
@@ -257,8 +257,11 @@ class CyEditor extends EventBus {
     }
 
     this._listeners.hoverout = (e) => {
+      // Only trigger on background clicks
+      if (e.target !== this.cy) return
+
       if (edgehandles) {
-        edgehandles.active = true
+        // edgehandles.active = true // Removing this hack as it might interfere
         edgehandles.stop(e)
       }
       if (noderesize) {
@@ -382,9 +385,10 @@ class CyEditor extends EventBus {
     }
 
     // navigator
+    // navigator
     if (navigator) {
       this.cy.navigator({
-        container: '#thumb'
+        container: this.editorOptions.navigatorContainer || '#thumb'
       })
     }
 
@@ -652,7 +656,7 @@ class CyEditor extends EventBus {
     }
   }
 
-  applyLayout (layoutName) {
+  applyLayout(layoutName) {
     const layoutConfigs = {
       grid: {
         name: 'grid',

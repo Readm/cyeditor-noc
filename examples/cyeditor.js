@@ -57,8 +57,8 @@ export default {
     this.cyEditor.on('show-json', () => {
       this.$emit('show-json')
     })
-    this.cyEditor.on('select', (data) => {
-      this.$emit('select', data)
+    this.cyEditor.on('select', (eventBag) => {
+      this.$emit('select', eventBag.target)
     })
     this.cyEditor.on('unselect', () => {
       this.$emit('unselect')
