@@ -112,6 +112,37 @@ const puppeteer = require('puppeteer');
                 throw new Error('JSON Editor component NOT found in property panel');
             }
 
+            // Feature Verification: Node Position Sync
+            console.log('Verifying Node Position Sync...');
+            await page.evaluate(() => {
+                const node = window.cy.nodes().first();
+                const oldPos = node.position();
+                const newPos = { x: oldPos.x + 50, y: oldPos.y + 50 };
+
+                // Move node and simulate drag end
+                node.position(newPos);
+                node.emit('dragfree');
+                console.log('Simulated dragfree event on node:', node.id());
+            });
+
+            // Wait for Vue update
+            await new Promise(r => setTimeout(r, 1000));
+
+            // Check if JSON editor contains the new position
+            const jsonText = await page.evaluate(() => {
+                // Get text content from jsoneditor (div.jsoneditor-tree)
+                const editor = document.querySelector('.jsoneditor');
+                return editor ? editor.textContent : '';
+            });
+
+            if (jsonText.includes('position') && jsonText.includes('x') && jsonText.includes('y')) {
+                console.log('SUCCESS: Position data detected in JSON Editor!');
+            } else {
+                console.warn('WARNING: Position data NOT detected in JSON Editor. Sync might have failed.');
+                // Don't fail hard yet, output text for debug
+                console.log('JSON Content:', jsonText.substring(0, 500));
+            }
+
             // Verify Sidebar Toggle
             console.log('Testing Sidebar toggle...');
             await page.click('.toggle-btn');

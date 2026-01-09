@@ -315,7 +315,10 @@ class CyEditor extends EventBus {
       .on('cyeditor.addnode', this._listeners.addEles)
       .on('cyeditor.afterDo cyeditor.afterRedo cyeditor.afterUndo', this._listeners._changeUndoRedo)
       .on('cyeditor.afterDo cyeditor.afterRedo cyeditor.afterUndo', this._listeners.syncNetwork)
-    this.on('change', this._handleInternalChange, this)
+      .on('change', this._handleInternalChange, this)
+      .on('dragfree', 'node', (e) => {
+        this.emit('node-drag-end', e.target)
+      })
     this.emit('ready')
   }
 

@@ -50,6 +50,7 @@
         @show-json="logNetwork"
         @select="handleSelect"
         @unselect="handleUnselect"
+        @node-drag-end="handleNodeDrag"
       />
 
       <div class="network-preview">
@@ -413,6 +414,38 @@ export default {
     handlePropertyCancel () {
       console.log('Property edit cancelled')
       // Do nothing, form component will reset internally
+    },
+    handleNodeDrag (node) {
+      if (!node) return
+      const pos = node.position()
+      // Round to avoid excessive decimals in JSON
+      const newPos = { x: Math.round(pos.x), y: Math.round(pos.y) }
+      
+      console.log(`Node ${node.id()} dragged to:`, newPos)
+      
+      // Update data.position so it appears in the JSON editor
+      node.data('position', newPos)
+      
+      // If using 'custom' data field (backend compat), sync it there too
+      const custom = node.data('custom')
+      if (custom) {
+        custom.position = newPos
+        node.data('custom', custom)
+      }
+      
+      // If this node is currently selected, force update the Property Panel
+      // Use loose equality to match string IDs with potentially numeric displayIds
+      if (this.selectedElement && String(this.selectedElement.displayId) === String(node.id())) {
+         // Re-read data to ensure any merging or refs are fresh
+         const updatedData = node.data('custom') || node.data()
+         this.selectedElement.data = JSON.parse(JSON.stringify(updatedData)) // Reactive update
+      }
+      
+      // Trigger global network change to update the Network JSON view
+      const editorComponent = this.$refs.demoEditor
+      if (editorComponent && editorComponent.cyEditor) {
+         editorComponent.cyEditor.emitNetworkChange('drag')
+      }
     }
   }
 }

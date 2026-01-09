@@ -63,6 +63,9 @@ export default {
     this.cyEditor.on('unselect', () => {
       this.$emit('unselect')
     })
+    this.cyEditor.on('node-drag-end', (eventBag) => {
+      this.$emit('node-drag-end', eventBag.target)
+    })
   },
   watch: {
     network: {
