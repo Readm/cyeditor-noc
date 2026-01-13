@@ -8,3 +8,11 @@ package-lock.json
 
 # Vuepress
 docs/.vuepress/dist
+
+# Logs
+*.log
+test_output*.log
+
+# Cypress
+cypress/screenshots
+cypress/videos

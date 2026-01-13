@@ -229,8 +229,19 @@ export function displayToNetwork(displayState = {}, baseNetwork = {}) {
   network.nodes = ensureArray(network.nodes)
   network.edges = ensureArray(network.edges)
 
-  const displayNodes = ensureArray(displayState.elements && displayState.elements.nodes)
-  const displayEdges = ensureArray(displayState.elements && displayState.elements.edges)
+  const elements = displayState.elements || {}
+  let displayNodes = []
+  let displayEdges = []
+
+  if (Array.isArray(elements)) {
+    // Flat array structure (cy.json() default output)
+    displayNodes = elements.filter(e => e.group === 'nodes')
+    displayEdges = elements.filter(e => e.group === 'edges')
+  } else {
+    // Object structure ({ nodes: [], edges: [] })
+    displayNodes = ensureArray(elements.nodes)
+    displayEdges = ensureArray(elements.edges)
+  }
 
   const nodeByDisplayId = new Map()
   const usedNodeIds = new Set(network.nodes.map(node => node.node_id))

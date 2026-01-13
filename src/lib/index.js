@@ -72,14 +72,37 @@ class CyEditor extends EventBus {
   }
 
   _syncNetworkFromDisplay(reason = 'manual') {
-    if (!this.cy || this._isSyncingNetwork) return
+    const log = (msg) => {
+      if (typeof window !== 'undefined') {
+        window.cyLogs = window.cyLogs || []
+        window.cyLogs.push(msg)
+      }
+      console.log(msg)
+    }
+
+    if (!this.cy || this._isSyncingNetwork) {
+      log(`[CyEditor] SKIP sync. reason=${reason}, hasCy=${!!this.cy}, syncing=${this._isSyncingNetwork}`)
+      return
+    }
+    log(`[CyEditor] RUN sync. reason=${reason}`)
     if (!this.displayState) {
       this.displayState = this.json(true)
     } else {
       this.displayState = this.json(true)
     }
+
+    const elements = (this.displayState && this.displayState.elements) || {}
+    const nodes = Array.isArray(elements) ? elements.filter(n => n.group === 'nodes') : (elements.nodes || [])
+    const node0 = nodes.find(n => n.data && n.data.id === 'node-0')
+    log(`[CyEditor] JSON from cy.json() has node-0 pos: ${JSON.stringify(node0 ? node0.position : 'missing')}`)
+
     const baseNetwork = this.networkState || { nodes: [], edges: [] }
     this.networkState = displayToNetwork(this.displayState, baseNetwork)
+
+    const netNodes = (this.networkState && Array.isArray(this.networkState.nodes)) ? this.networkState.nodes : []
+    const netNode0 = netNodes.find(n => n.node_id === 0)
+    log(`[CyEditor] Network state has node-0 pos: ${JSON.stringify(netNode0 && netNode0.display ? netNode0.display.position : 'missing')}`)
+
     this._emitNetworkChange(reason)
   }
 
@@ -202,6 +225,7 @@ class CyEditor extends EventBus {
       console.error('There is no any element matching your container')
       return
     }
+    console.log('[DEBUG] cyOptions layout:', JSON.stringify(this.cyOptions.layout))
     this.cy = cytoscape(this.cyOptions)
   }
 

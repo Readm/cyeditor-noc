@@ -41,6 +41,7 @@ export default {
       network: this.network
     }
     this.cyEditor = new CyEditor(config)
+    if (window.Cypress) window.testCyEditor = this.cyEditor
     if (!this.network && this.value) {
       this.cyEditor.json(this.value)
     }

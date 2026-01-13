@@ -200,9 +200,9 @@ export default {
       }
       const editor = this.$refs.demoEditor
       if (editor && editor.cyEditor && editor.cyEditor.cy) {
-        window.cy = editor.cyEditor.cy
+        window.testCy = editor.cyEditor.cy
         window.app = this
-        console.log('E2E: window.cy and window.app exposed for automated testing')
+        console.log('E2E: window.testCy and window.app exposed for automated testing')
       } else {
         setTimeout(() => this.exposeCyForTest(attempts - 1), 500)
       }
@@ -403,7 +403,8 @@ export default {
       const editorComponent = this.$refs.demoEditor
       if (editorComponent && editorComponent.cyEditor) {
         // 手动触发 network-change 事件
-        editorComponent.cyEditor.emitNetworkChange()
+        // Use internal sync to update networkState from cy elements
+        editorComponent.cyEditor._syncNetworkFromDisplay('property-save')
       }
 
       // Update selectedElement data
@@ -444,7 +445,7 @@ export default {
       // Trigger global network change to update the Network JSON view
       const editorComponent = this.$refs.demoEditor
       if (editorComponent && editorComponent.cyEditor) {
-         editorComponent.cyEditor.emitNetworkChange('drag')
+         editorComponent.cyEditor._syncNetworkFromDisplay('drag')
       }
     }
   }
