@@ -5,7 +5,7 @@ module.exports = defineConfig({
         baseUrl: 'http://localhost:8080',
         specPattern: 'tests/e2e/**/*.cy.js',
         supportFile: false,
-        video: false,
+        video: true,
         setupNodeEvents(on, config) {
             // implement node event listeners here
         },

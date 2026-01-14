@@ -60,6 +60,7 @@ describe('CyEditor E2E', () => {
 
     it('should load the editor and render canvas', () => {
         cy.get('canvas').should('exist')
+        cy.wait(500)
     })
 
     it('programmatically select node should show node panel', () => {
@@ -74,6 +75,7 @@ describe('CyEditor E2E', () => {
         // Verify Node Property Panel Title
         cy.contains('h3', 'Node 0 Properties').should('exist')
         cy.get('.jsoneditor').should('exist')
+        cy.wait(500)
     })
 
     it('programmatically select edge should show edge panel', () => {
@@ -88,6 +90,7 @@ describe('CyEditor E2E', () => {
         // Verify Edge Property Panel Title
         cy.contains('h3', 'Edge 1 Properties').should('exist')
         cy.get('.jsoneditor').should('exist')
+        cy.wait(500)
     })
 
     // Known limitation: Dragging on Canvas via Cypress is tricky due to event coordinates
@@ -169,6 +172,7 @@ describe('CyEditor E2E', () => {
             expect(nodeJson.display.position.x).to.equal(150)
             expect(nodeJson.display.position.y).to.equal(150)
         })
+        cy.wait(500)
     })
 
     it('websocket message should update network', () => {
@@ -192,6 +196,7 @@ describe('CyEditor E2E', () => {
             const node0 = app.latestNetwork.nodes.find(n => n.node_id === 0)
             expect(node0.display.position.y).to.equal(200)
         })
+        cy.wait(500)
 
         // Verify Canvas is updated (check position in Cy)
         cy.window().then((win) => {
