@@ -89,18 +89,25 @@ class Toolbar {
     let { _options } = this
     if (_options.container) {
       if (typeof _options.container === 'string') {
-        this._panel = utils.query(_options.container)[0]
+        this._container = utils.query(_options.container)[0]
       } else if (utils.isNode(_options.container)) {
-        this._panel = _options.container
+        this._container = _options.container
       }
-      if (!this._panel) {
+      if (!this._container) {
         console.error('There is no any element matching your container')
         return
       }
     } else {
-      this._panel = document.createElement('div')
-      document.body.appendChild(this._panel)
+      this._container = document.createElement('div')
+      document.body.appendChild(this._container)
     }
+
+    // Create a specific wrapper for toolbar items to avoid overwriting existing content in the container
+    this._panel = document.createElement('div')
+    this._panel.className = 'cy-editor-toolbar-items'
+    // Append to container instead of overwriting innerHTML
+    this._container.appendChild(this._panel)
+
     this._panelHtml()
   }
 

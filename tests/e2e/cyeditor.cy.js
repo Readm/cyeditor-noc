@@ -48,6 +48,8 @@ describe('CyEditor E2E', () => {
         // Mock Backend API
         cy.intercept('GET', '/load_networks', [mockNetwork]).as('loadNetworks')
         cy.intercept('GET', '/ws', { statusCode: 200 }).as('ws')
+        cy.intercept('POST', '/build_network', { statusCode: 200 }).as('buildNetwork')
+        cy.intercept('POST', '/advance_to', { statusCode: 200 }).as('advanceTo')
 
         cy.visit('/')
 
@@ -192,9 +194,9 @@ describe('CyEditor E2E', () => {
             const app = win.app
             expect(app.latestNetwork.cycle).to.equal(100)
 
-            // Verify position update is reflected in model
+            // Verify position update is IGNORED to preserve user layout
             const node0 = app.latestNetwork.nodes.find(n => n.node_id === 0)
-            expect(node0.display.position.y).to.equal(200)
+            expect(node0.display.position.y).to.equal(100) // Should remain 100, not 200
         })
         cy.wait(500)
 
@@ -213,9 +215,70 @@ describe('CyEditor E2E', () => {
             // CyEditor watches generic 'network' prop?
             // Need to check CyEditor.js or wrapper if it watches 'network'.
 
-            // Checking App.vue template: :network="networkValue" @network-change...
-            // Checking CyEditor.vue (wrapper)? No, CyEditor is JS class.
-            // Ah, <cy-editor> component in App.vue likely wraps the class.
+        })
+    })
+
+    it('clicking Step should automatically build and then advance', () => {
+        // Find Step button
+        cy.get('.btn-advance').click()
+
+        // Verify build_network was called first
+        cy.wait('@buildNetwork').then((interception) => {
+            assert.isNotNull(interception.response.body, 'Build API called')
+        })
+
+        // Verify advance_to was called second
+        cy.wait('@advanceTo').then((interception) => {
+            assert.isNotNull(interception.response.body, 'Advance API called')
+        })
+    })
+
+    it('changing layout should persist after Step', () => {
+        // 1. Initial Position Check
+        cy.window().then((win) => {
+            const node0 = win.testCy.getElementById('node-0')
+            // Initial mock position is {x: 100, y: 100}
+            expect(node0.position('x')).to.equal(100)
+        })
+
+        // 2. Trigger Grid Layout
+        // Need to open toolbar first? No, it's always visible or in a dedicated panel
+        // Based on cyeditor-toolbar/index.js, it creates .cy-editor-toolbar-items
+        cy.get('.command[data-command="layout-grid"]').click()
+
+        // Wait for layout animation and sync
+        cy.wait(2000)
+
+        // 3. Verify Position Changed
+        cy.window().then((win) => {
+            const node0 = win.testCy.getElementById('node-0')
+            const pos = node0.position()
+            expect(pos.x).to.not.equal(100)
+            expect(pos.y).to.not.equal(100)
+
+            // Store new position
+            win.lastGridPos = { x: pos.x, y: pos.y }
+        })
+
+        // 4. Click Step (triggers build + advance)
+        cy.get('.btn-advance').click()
+
+        cy.wait('@buildNetwork')
+        cy.wait('@advanceTo')
+        cy.wait(500) // Wait for WS update
+
+        // 5. Verify Position Persists
+        cy.window().then((win) => {
+            const node0 = win.testCy.getElementById('node-0')
+            const currentPos = node0.position()
+            const expected = win.lastGridPos
+
+            console.log('Post-Step Pos:', currentPos)
+            console.log('Expected Pos:', expected)
+
+            // Allow small floating point diffs
+            expect(currentPos.x).to.be.closeTo(expected.x, 1)
+            expect(currentPos.y).to.be.closeTo(expected.y, 1)
         })
     })
 })

@@ -230,11 +230,11 @@ class CyEditor extends EventBus {
   }
 
   _initDom() {
-    let { dragAddNodes, navigator, navigatorContainer, elementsInfo, toolbar, container } = this.editorOptions
+    let { dragAddNodes, navigator, navigatorContainer, elementsInfo, toolbar, toolbarContainer, container } = this.editorOptions
     let left = dragAddNodes ? `<div class="left"></div>` : ''
     let navigatorDom = (navigator && !navigatorContainer) ? `<div class="panel-title">${utils.localize('window-navigator')}</div><div id="thumb"></div>` : ''
     let infoDom = elementsInfo ? `<div id="info"></div>` : ''
-    let domHtml = toolbar ? '<div id="toolbar"></div>' : ''
+    let domHtml = (toolbar && !toolbarContainer) ? '<div id="toolbar"></div>' : ''
     let right = ''
     if ((navigator && !navigatorContainer) || elementsInfo) {
       right = `<div class="right">
@@ -380,7 +380,7 @@ class CyEditor extends EventBus {
     // toolbar
     if (Array.isArray(toolbar) || toolbar === true) {
       this._plugins.toolbar = this.cy.toolbar({
-        container: '#toolbar',
+        container: this.editorOptions.toolbarContainer || '#toolbar',
         toolbar: toolbar
       })
       if (toolbar === true || toolbar.indexOf('gridon') > -1) {
@@ -596,11 +596,7 @@ class CyEditor extends EventBus {
     }
 
     // 再次验证，确保数据已更新
-    setTimeout(() => {
-      const finalData = node.data()
-      console.log('Final node data check:', finalData)
-      console.log('Final type:', finalData.type)
-    }, 100)
+
 
     this.emit('change', node, this)
     this._syncNetworkFromDisplay('shape')
@@ -734,12 +730,14 @@ class CyEditor extends EventBus {
 
     console.log('Applying layout:', layoutName)
     const layout = this.cy.layout(config)
-    layout.run()
 
-    // 布局完成后触发 network-change 事件以保存位置
-    setTimeout(() => {
+    // Use layoutstop event to sync data only after layout finishes
+    layout.one('layoutstop', () => {
+      console.log('Layout finished, syncing network...')
       this._syncNetworkFromDisplay('layout-applied')
-    }, 500)
+    })
+
+    layout.run()
   }
 
   _changeUndoRedo() {

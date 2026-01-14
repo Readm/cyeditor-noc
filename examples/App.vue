@@ -2,41 +2,39 @@
   <div class="app-layout">
     <!-- Main Content Area -->
     <div class="main-content">
-      <div class="demo-actions">
-        <button @click="resetNetwork">Reset</button>
-        <button @click="buildNetwork" style="background-color: #e6f7ff; border-color: #1890ff; color: #1890ff;">Build & Deploy</button>
+      <!-- Unified Toolbar Container -->
+      <div id="unified-toolbar" class="unified-toolbar">
+        <!-- App Actions Section -->
+        <div class="app-actions">
+          <button @click="resetNetwork">Reset</button>
 
-        <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px;">
-          <button @click="toggleMode" style="font-size: 12px; min-width: 90px;">
-            {{ advanceMode === 'step' ? 'Mode: Step' : 'Mode: Target' }} ↻
-          </button>
-          <input type="number" v-model="advanceCycle" style="width: 70px" />
-          <button @click="advanceSimulation">
-            {{ advanceMode === 'step' ? 'Step' : 'Advance To' }}
-          </button>
-        </span>
+          <span class="divider">
+            <button @click="toggleMode" style="font-size: 12px; min-width: 90px;">
+              {{ advanceMode === 'step' ? 'Mode: Step' : 'Mode: Target' }} ↻
+            </button>
+            <input type="number" v-model="advanceCycle" style="width: 70px" />
+            <button class="btn-advance" @click="advanceSimulation">
+              {{ advanceMode === 'step' ? 'Step' : 'Advance To' }}
+            </button>
+          </span>
 
-        <div v-if="connected" style="color: green; margin-left: 10px; align-self: center;">● WS Connected</div>
-        <div v-else style="color: red; margin-left: 10px; align-self: center;">○ WS Disconnected</div>
+          <div v-if="connected" style="color: green; margin-left: 10px; align-self: center;">●</div>
+          <div v-else style="color: red; margin-left: 10px; align-self: center;">○</div>
 
-        <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
-          <select v-model="selectedExample" style="min-width: 150px;">
-            <option value="">-- 选择示例网络 --</option>
-            <option value="ring_4node.json">环形网络 (4节点)</option>
-            <option value="ring_8node.json">环形网络 (8节点)</option>
-            <option value="ring_16node.json">环形网络 (16节点)</option>
-            <option value="multi_edge_demo.json">多边示例 (2节点)</option>
-          </select>
-          <button @click="loadExampleNetwork" :disabled="!selectedExample">加载示例</button>
-        </span>
+          <span class="divider">
+            <select v-model="selectedExample" style="min-width: 150px;">
+              <option value="">-- 选择示例网络 --</option>
+              <option value="ring_4node.json">环形网络 (4节点)</option>
+              <option value="ring_8node.json">环形网络 (8节点)</option>
+              <option value="ring_16node.json">环形网络 (16节点)</option>
+              <option value="multi_edge_demo.json">多边示例 (2节点)</option>
+            </select>
+            <button @click="loadExampleNetwork" :disabled="!selectedExample">加载示例</button>
+          </span>
 
-        <span style="border-left: 1px solid #ddd; padding-left: 10px; display: flex; gap: 5px; align-items: center;">
-          <select v-model="presetName">
-            <option value="bi_ring">Bi-Ring</option>
-          </select>
-          <input type="number" v-model.number="presetNodes" style="width: 50px" title="Nodes" />
-          <button @click="loadPresetNetwork">动态生成</button>
-        </span>
+
+        </div>
+        <!-- Editor Toolbar Items will be injected here by CyEditor -->
       </div>
 
       <cy-editor
@@ -124,7 +122,7 @@
 
 <script>
 import cyEditor from './cyeditor.js'
-import { loadNetworks, resetNetwork, advanceTo, addNetwork, loadPreset } from '../src/api/networkService'
+import { loadNetworks, resetNetwork, advanceTo, addNetwork } from '../src/api/networkService'
 import JsonViewer from 'vue-json-viewer'
 import NodePropertyPanel from '../src/components/NodePropertyPanel.vue'
 import EdgePropertyPanel from '../src/components/EdgePropertyPanel.vue'
@@ -151,15 +149,14 @@ export default {
         lineType: 'taxi',
         elementsInfo: false, // Disable default panel in favor of our custom one
         navigator: true,
-        navigatorContainer: '#navigator-container' // Render navigator in our sidebar
+        navigatorContainer: '#navigator-container', // Render navigator in our sidebar
+        toolbarContainer: '#unified-toolbar' // Unified toolbar container
       },
       sidebarCollapsed: false,
       advanceCycle: 100,
       advanceMode: 'step',
       connected: false,
       ws: null,
-      presetName: 'bi_ring',
-      presetNodes: 16,
       showLogModal: false,
       selectedData: null,
       selectedExample: '',
@@ -231,6 +228,19 @@ export default {
           const data = JSON.parse(event.data)
           console.log('WS Update - cycle:', data.cycle)
 
+          // Preserve positions from current state to prevent reset
+          if (this.latestNetwork && this.latestNetwork.nodes && data.nodes) {
+             const currentNodesMap = new Map(this.latestNetwork.nodes.map(n => [n.node_id, n]))
+             data.nodes.forEach(node => {
+                 const current = currentNodesMap.get(node.node_id)
+                 if (current && current.display && current.display.position) {
+                     if (!node.display) node.display = {}
+                     // Keep current position
+                     node.display.position = current.display.position
+                 }
+             })
+          }
+
           // 更新数据但不重新加载网络（避免重置位置）
           this.networkValue = data
           this.latestNetwork = data
@@ -282,7 +292,7 @@ export default {
         console.log('Building network with:', payload)
         await addNetwork(payload)
         // Backend should broadcast new state via WS
-        await this.refreshNetwork()
+        // await this.refreshNetwork() // Optimization: Unnecessary refetch, rely on WS for updates
         this.advanceCycle = 100
         this.advanceMode = 'step'
       } catch (e) {
@@ -301,6 +311,10 @@ export default {
     },
     async advanceSimulation () {
       try {
+        // Auto-build before advancing
+        console.log('Auto-building network before advance...')
+        await this.buildNetwork()
+
         let cycle = Number(this.advanceCycle)
         // If Step mode, target = current + input
         if (this.advanceMode === 'step') {
@@ -313,18 +327,7 @@ export default {
         console.error('Advance failed', e)
       }
     },
-    async loadPresetNetwork () {
-      try {
-        console.log(`Loading preset: ${this.presetName} with ${this.presetNodes} nodes`)
-        await loadPreset(this.presetName, { nodes: this.presetNodes })
-        await this.refreshNetwork()
-        this.advanceCycle = 100
-        this.advanceMode = 'step'
-      } catch (e) {
-        console.error('Load preset failed', e)
-        alert('Load preset failed: ' + e.message)
-      }
-    },
+
     async loadExampleNetwork () {
       try {
         if (!this.selectedExample) {
@@ -470,19 +473,83 @@ export default {
     gap: 16px;
   }
 
-  .demo-actions {
+  .unified-toolbar {
     display: flex;
-    gap: 12px;
     flex-wrap: wrap;
+    align-items: center;
     background: #fff;
-    padding: 10px;
+    padding: 8px 12px;
     border-radius: 4px;
     border: 1px solid #eaeaea;
+    gap: 16px; /* Separation between app actions and editor actions */
   }
 
-  .demo-actions button {
-    padding: 6px 14px;
+  .app-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    border-right: 2px solid #f0f0f0;
+    padding-right: 16px;
+  }
+
+  .unified-toolbar button {
+    padding: 5px 12px;
     cursor: pointer;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+  
+  .unified-toolbar button:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+  }
+
+  .divider {
+    border-left: 1px solid #eaeaea;
+    padding-left: 10px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+
+  /* Target the injected editor toolbar items */
+  :deep(.cy-editor-toolbar-items) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0px; 
+  }
+  
+  /* Ensure injected toolbar icons look consistent */
+  :deep(.command) {
+    cursor: pointer;
+    padding: 6px;
+    font-size: 20px;
+    color: #666;
+    border-radius: 3px;
+    transition: all 0.2s;
+    display: flex; /* Fix alignment */
+  }
+  :deep(.command:hover) {
+    background: #f0f0f0;
+    color: #333;
+  }
+  :deep(.command.selected) {
+    background: #e6f7ff;
+    color: #1890ff;
+  }
+  :deep(.command.disable) {
+    color: #ccc;
+    cursor: not-allowed;
+  }
+  :deep(.separator) {
+    margin: 0 8px;
+    border-right: 1px solid #eee;
+    height: 20px;
   }
 
   .cy-editor {
