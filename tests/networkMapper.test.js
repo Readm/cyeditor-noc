@@ -2,7 +2,7 @@
  * Tests for networkMapper utility
  */
 
-import { networkToDisplay, displayToNetwork } from '../src/utils/networkMapper'
+import { networkToDisplay, displayToNetwork, x6ToNetwork } from '../src/utils/networkMapper'
 
 describe('networkMapper', () => {
   describe('networkToDisplay', () => {
@@ -284,5 +284,47 @@ describe('networkMapper', () => {
       expect(convertedNetwork.pan).toEqual({ x: 50, y: 100 })
     })
   })
-})
 
+  describe('x6ToNetwork', () => {
+
+    test('should convert X6 JSON to network format', () => {
+      const x6Data = {
+        cells: [
+          {
+            shape: 'custom-vue-node',
+            id: 'node-1',
+            position: { x: 100, y: 200 },
+            data: { label: 'X6 Node', customProp: 'val' }
+          },
+          {
+            shape: 'edge',
+            id: 'edge-1',
+            source: { cell: 'node-1' },
+            target: { cell: 'node-2' },
+            data: { customProp: 'edgeVal' }
+          },
+          {
+            shape: 'custom-vue-node',
+            id: 'node-2',
+            position: { x: 300, y: 400 },
+            data: { label: 'X6 Node 2' }
+          }
+        ]
+      }
+
+      const result = x6ToNetwork(x6Data, {})
+
+      // Check Nodes
+      expect(result.nodes).toHaveLength(2)
+      const node1 = result.nodes.find(n => n.display.id === 'node-1')
+      expect(node1).toBeDefined()
+      expect(node1.display.position).toEqual({ x: 100, y: 200 })
+
+      // Check Edges
+      expect(result.edges).toHaveLength(1)
+      const edge1 = result.edges[0]
+      expect(edge1.src_node_id).toBe(node1.node_id)
+      expect(edge1.display.data.id).toBe('edge-1')
+    })
+  })
+})

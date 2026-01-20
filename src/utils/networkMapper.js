@@ -31,7 +31,7 @@ const parseEdgeDisplayId = (edgeId) => {
   if (parts.length >= 5 && parts[0] === 'edge') {
     return {
       srcNodeId: parseInt(parts[1]) || 0,
-      srcPort: parseInt(parts[2].substring(1)) || 0,  // 去掉 'p' 前缀
+      srcPort: parseInt(parts[2].substring(1)) || 0, // 去掉 'p' 前缀
       dstNodeId: parseInt(parts[3]) || 0,
       dstPort: parseInt(parts[4].substring(1)) || 0
     }
@@ -154,7 +154,7 @@ const buildEdgeDisplayFromCy = (displayEdge) => {
   return display
 }
 
-export function networkToDisplay(network = {}) {
+export function networkToDisplay (network = {}) {
   const nodes = ensureArray(network.nodes)
   const edges = ensureArray(network.edges)
   const nodeIdToDisplayId = new Map()
@@ -224,7 +224,7 @@ const getNextNumericId = (usedIds, start = 1) => {
 }
 
 // 🔧 修改: 支持多条平行边
-export function displayToNetwork(displayState = {}, baseNetwork = {}) {
+export function displayToNetwork (displayState = {}, baseNetwork = {}) {
   const network = deepClone(baseNetwork)
   network.nodes = ensureArray(network.nodes)
   network.edges = ensureArray(network.edges)
@@ -364,9 +364,65 @@ export function displayToNetwork(displayState = {}, baseNetwork = {}) {
   return network
 }
 
+export function x6ToDisplayState (x6Data) {
+  // x6Data.cells is array of { shape, id, z, position, size, attrs, data, store, ... }
+  // or { shape: 'edge', id, source: { cell: id }, target: { cell: id } ... }
+
+  const cells = ensureArray(x6Data.cells)
+  const elements = []
+
+  cells.forEach(cell => {
+    if (cell.shape === 'edge' || (cell.source && cell.target)) {
+      // Edge
+      const sourceId = cell.source.cell || cell.source
+      const targetId = cell.target.cell || cell.target
+
+      const edge = {
+        group: 'edges',
+        data: {
+          id: cell.id,
+          source: (typeof sourceId === 'object') ? sourceId.cell : sourceId,
+          target: (typeof targetId === 'object') ? targetId.cell : targetId,
+          // Extract custom data if present
+          ...Object.assign({}, cell.data || {})
+        }
+      }
+      elements.push(edge)
+    } else {
+      // Node
+      const node = {
+        group: 'nodes',
+        data: {
+          id: cell.id,
+          // Extract custom data if present
+          ...Object.assign({}, cell.data || {})
+        },
+        position: {
+          x: cell.position ? cell.position.x : 0,
+          y: cell.position ? cell.position.y : 0
+        }
+      }
+      elements.push(node)
+    }
+  })
+
+  return {
+    elements,
+    zoom: 1, // X6 handles zoom differently, might need to pass in
+    pan: { x: 0, y: 0 }
+  }
+}
+
+export function x6ToNetwork (x6Data, baseNetwork = {}) {
+  const displayState = x6ToDisplayState(x6Data)
+  return displayToNetwork(displayState, baseNetwork)
+}
+
 export default {
   networkToDisplay,
   displayToNetwork,
+  x6ToNetwork,
+  x6ToDisplayState,
   buildEdgeDisplayId,
   parseEdgeDisplayId
 }

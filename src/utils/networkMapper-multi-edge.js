@@ -31,7 +31,7 @@ const parseEdgeDisplayId = (edgeId) => {
   if (parts.length >= 5 && parts[0] === 'edge') {
     return {
       srcNodeId: parseInt(parts[1]) || 0,
-      srcPort: parseInt(parts[2].substring(1)) || 0,  // 去掉 'p' 前缀
+      srcPort: parseInt(parts[2].substring(1)) || 0, // 去掉 'p' 前缀
       dstNodeId: parseInt(parts[3]) || 0,
       dstPort: parseInt(parts[4].substring(1)) || 0
     }
@@ -154,7 +154,7 @@ const buildEdgeDisplayFromCy = (displayEdge) => {
   return display
 }
 
-export function networkToDisplay(network = {}) {
+export function networkToDisplay (network = {}) {
   const nodes = ensureArray(network.nodes)
   const edges = ensureArray(network.edges)
   const nodeIdToDisplayId = new Map()
@@ -224,7 +224,7 @@ const getNextNumericId = (usedIds, start = 1) => {
 }
 
 // 🔧 修改: 支持多条平行边
-export function displayToNetwork(displayState = {}, baseNetwork = {}) {
+export function displayToNetwork (displayState = {}, baseNetwork = {}) {
   const network = deepClone(baseNetwork)
   network.nodes = ensureArray(network.nodes)
   network.edges = ensureArray(network.edges)

@@ -99,7 +99,7 @@ const buildEdgeDisplayFromCy = (displayEdge) => {
   return display
 }
 
-export function networkToDisplay(network = {}) {
+export function networkToDisplay (network = {}) {
   const nodes = ensureArray(network.nodes)
   const edges = ensureArray(network.edges)
   const nodeIdToDisplayId = new Map()
@@ -164,7 +164,7 @@ const getNextNumericId = (usedIds, start = 1) => {
   return candidate
 }
 
-export function displayToNetwork(displayState = {}, baseNetwork = {}) {
+export function displayToNetwork (displayState = {}, baseNetwork = {}) {
   const network = deepClone(baseNetwork)
   network.nodes = ensureArray(network.nodes)
   network.edges = ensureArray(network.edges)
@@ -265,4 +265,3 @@ export default {
   networkToDisplay,
   displayToNetwork
 }
-

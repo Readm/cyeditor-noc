@@ -15,7 +15,7 @@ const buildUrl = (path, baseUrl) => {
   return `${prefix.replace(/\/$/, '')}${path}`
 }
 
-async function request(path, fetchOptions = {}, options = {}) {
+async function request (path, fetchOptions = {}, options = {}) {
   const url = buildUrl(path, options.baseUrl)
   const response = await fetch(url, Object.assign({
     headers: {
@@ -37,7 +37,7 @@ async function request(path, fetchOptions = {}, options = {}) {
  * @param {Object} [options] - 请求选项
  * @returns {Promise<FlowSimNetwork[]>}
  */
-export function loadNetworks(options = {}) {
+export function loadNetworks (options = {}) {
   return request('/load_networks', { method: 'GET' }, options)
 }
 
@@ -47,7 +47,7 @@ export function loadNetworks(options = {}) {
  * @param {Object} [options] - 请求选项
  * @returns {Promise<FlowSimNetwork>}
  */
-export function addNetwork(network, options = {}) {
+export function addNetwork (network, options = {}) {
   return request('/build_network', {
     method: 'POST',
     body: JSON.stringify(network)
@@ -60,7 +60,7 @@ export function addNetwork(network, options = {}) {
  * @param {Object} [options] - 请求选项
  * @returns {Promise<FlowSimNetwork>}
  */
-export function resetNetwork(network, options = {}) {
+export function resetNetwork (network, options = {}) {
   return request('/reset_network', {
     method: 'POST',
     body: JSON.stringify(network)
@@ -73,7 +73,7 @@ export function resetNetwork(network, options = {}) {
  * @param {Object} [options] - 请求选项
  * @returns {Promise<FlowSimNetwork>}
  */
-export function advanceTo(cycle, options = {}) {
+export function advanceTo (cycle, options = {}) {
   return request('/advance_to', {
     method: 'POST',
     body: JSON.stringify({ cycle })
@@ -87,7 +87,7 @@ export function advanceTo(cycle, options = {}) {
  * @param {Object} [options] - 请求选项
  * @returns {Promise<FlowSimNetwork>}
  */
-export function loadPreset(name, params = {}, options = {}) {
+export function loadPreset (name, params = {}, options = {}) {
   return request('/load_preset', {
     method: 'POST',
     body: JSON.stringify({ name, params })

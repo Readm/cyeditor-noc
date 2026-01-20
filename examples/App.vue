@@ -31,24 +31,17 @@
             </select>
             <button @click="loadExampleNetwork" :disabled="!selectedExample">加载示例</button>
           </span>
-
-
         </div>
-        <!-- Editor Toolbar Items will be injected here by CyEditor -->
       </div>
 
-      <cy-editor
+      <x6-editor
         v-if="appMounted"
-        ref="demoEditor"
-        class="cy-editor"
+        ref="x6Editor"
+        class="main-editor"
         :network="networkValue"
-        :cy-config="cyConfig"
-        :editor-config="editorConfig"
+        @select="handleSelect" 
         @network-change="handleNetworkChange"
-        @show-json="logNetwork"
-        @select="handleSelect"
         @unselect="handleUnselect"
-        @node-drag-end="handleNodeDrag"
       />
 
       <div class="network-preview">
@@ -65,18 +58,13 @@
     <!-- Right Sidebar -->
     <div class="right-sidebar" :class="{ collapsed: sidebarCollapsed }">
       <div class="sidebar-header">
-        <span v-if="!sidebarCollapsed" class="sidebar-title">Navigator & Properties</span>
+        <span v-if="!sidebarCollapsed" class="sidebar-title">Properties</span>
         <button class="toggle-btn" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? 'Expand' : 'Collapse'">
           {{ sidebarCollapsed ? '◀' : '▶' }}
         </button>
       </div>
 
       <div class="sidebar-content" v-show="!sidebarCollapsed">
-        <div class="navigator-section">
-          <!-- Cytoscape Navigator will be injected here -->
-          <div id="navigator-container"></div>
-        </div>
-
         <div class="property-section">
           <div v-if="selectedElement">
             <node-property-panel
@@ -121,19 +109,19 @@
 </template>
 
 <script>
-import cyEditor from './cyeditor.js'
 import { loadNetworks, resetNetwork, advanceTo, addNetwork } from '../src/api/networkService'
 import JsonViewer from 'vue-json-viewer'
 import NodePropertyPanel from '../src/components/NodePropertyPanel.vue'
 import EdgePropertyPanel from '../src/components/EdgePropertyPanel.vue'
+import X6Editor from '../src/lib/X6Editor.vue'
 
 export default {
   name: 'App',
   components: {
-    cyEditor,
     JsonViewer,
     NodePropertyPanel,
-    EdgePropertyPanel
+    EdgePropertyPanel,
+    X6Editor
   },
   data () {
     return {
@@ -144,14 +132,6 @@ export default {
         edges: []
       },
       latestNetwork: null,
-      cyConfig: {},
-      editorConfig: {
-        lineType: 'taxi',
-        elementsInfo: false, // Disable default panel in favor of our custom one
-        navigator: true,
-        navigatorContainer: '#navigator-container', // Render navigator in our sidebar
-        toolbarContainer: '#unified-toolbar' // Unified toolbar container
-      },
       sidebarCollapsed: false,
       advanceCycle: 100,
       advanceMode: 'step',
@@ -160,7 +140,7 @@ export default {
       showLogModal: false,
       selectedData: null,
       selectedExample: '',
-      selectedElement: null, // { group: 'nodes'|'edges', data: {...}, cyElement: ... }
+      selectedElement: null, // { group: 'nodes'|'edges', data: {...}, displayId: ... }
       appMounted: false
     }
   },
@@ -172,15 +152,15 @@ export default {
   async mounted () {
     this.setupWebSocket()
     
-    // Delay rendering CyEditor until DOM (including sidebar) is ready
+    // Delay rendering Editor until DOM (including sidebar) is ready
     this.$nextTick(async () => {
-      this.appMounted = true // Trigger v-if for cy-editor
+      this.appMounted = true
       
       // Load initial network
       await this.refreshNetwork() 
       
-      // Expose cy instance for E2E testing (Robust polling)
-      this.exposeCyForTest()
+      // Expose app instance for E2E testing
+      this.exposeAppForTest()
     })
   },
   beforeDestroy () {
@@ -190,25 +170,15 @@ export default {
     window.removeEventListener('resize', this.resizeEditor)
   },
   methods: {
-    exposeCyForTest (attempts = 20) {
-      if (attempts <= 0) {
-        console.warn('E2E: Failed to expose window.cy after multiple attempts')
-        return
-      }
-      const editor = this.$refs.demoEditor
-      if (editor && editor.cyEditor && editor.cyEditor.cy) {
-        window.testCy = editor.cyEditor.cy
-        window.app = this
-        console.log('E2E: window.testCy and window.app exposed for automated testing')
-      } else {
-        setTimeout(() => this.exposeCyForTest(attempts - 1), 500)
-      }
+    exposeAppForTest () {
+      // Always expose app
+      window.app = this
+      console.log('E2E: window.app exposed for automated testing')
     },
     setupWebSocket () {
       // Use proxy: connect to same host/port as the web page
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
       const wsUrl = `${protocol}//${window.location.host}/ws`
-      // console.log('Connecting to WS:', wsUrl) // Debug
       this.ws = new WebSocket(wsUrl)
 
       this.ws.onopen = () => {
@@ -241,16 +211,9 @@ export default {
              })
           }
 
-          // 更新数据但不重新加载网络（避免重置位置）
+          // Update data but rely on X6Editor verify implementation to avoid re-layout if unnecessary
           this.networkValue = data
           this.latestNetwork = data
-
-          // 不调用 loadNetwork，只更新必要的状态数据
-          // loadNetwork 会重置所有节点位置，我们应该避免这样做
-          // const editorComponent = this.$refs.demoEditor
-          // if (editorComponent && editorComponent.cyEditor) {
-          //   editorComponent.cyEditor.loadNetwork(this.networkValue)
-          // }
         } catch (e) {
           console.error('WS Message Error:', e)
         }
@@ -268,10 +231,6 @@ export default {
         if (networks && networks.length > 0) {
           this.networkValue = networks[0]
           this.latestNetwork = this.networkValue
-          const editorComponent = this.$refs.demoEditor
-          if (editorComponent && editorComponent.cyEditor) {
-            editorComponent.cyEditor.loadNetwork(this.networkValue)
-          }
         }
       } catch (e) {
         console.error('Failed to load network:', e)
@@ -280,7 +239,6 @@ export default {
     async resetNetwork () {
       try {
         await resetNetwork({})
-        // No need to manual refresh if WS is connected, but good to be safe
       } catch (e) {
         console.error('Reset failed', e)
       }
@@ -292,7 +250,6 @@ export default {
         console.log('Building network with:', payload)
         await addNetwork(payload)
         // Backend should broadcast new state via WS
-        // await this.refreshNetwork() // Optimization: Unnecessary refetch, rely on WS for updates
         this.advanceCycle = 100
         this.advanceMode = 'step'
       } catch (e) {
@@ -350,12 +307,6 @@ export default {
         this.networkValue = exampleNetwork
         this.latestNetwork = exampleNetwork
 
-        // 更新 CyEditor 显示
-        const editorComponent = this.$refs.demoEditor
-        if (editorComponent && editorComponent.cyEditor) {
-          editorComponent.cyEditor.loadNetwork(exampleNetwork)
-        }
-
         console.log('✓ 示例网络加载成功，点击 "Build & Deploy" 以部署到后端')
       } catch (e) {
         console.error('Load example failed', e)
@@ -366,90 +317,31 @@ export default {
        this.selectedData = data
        
        if (data) {
-         // Get Cytoscape data (merge custom if exists, otherwise full data)
-         const customData = data.custom || data
-         
-         // Get Cytoscape element for property editing
-         const editorComponent = this.$refs.demoEditor
-         if (editorComponent && editorComponent.cyEditor) {
-           const cy = editorComponent.cyEditor.cy
-           const cyElement = cy.getElementById(data.id)
-           
-           if (cyElement && cyElement.length > 0) {
-             // Store cyElement non-reactively to avoid circular structure hang in Vue Observer
-             this._selectedCyElement = cyElement
-             
-             this.selectedElement = {
-               group: cyElement.group(), // 'nodes' or 'edges'
-               data: customData,
-               displayId: data.id
-             }
+           this.selectedElement = {
+             group: data.type === 'node' ? 'nodes' : 'edges',
+             data: data.data,
+             displayId: data.id
            }
-         }
+           console.log('Selection:', this.selectedElement)
        }
     },
     handleUnselect () {
       this.selectedData = null
       this.selectedElement = null
-      this._selectedCyElement = null
     },
     handlePropertySave (updatedData) {
       console.log('Property saved:', updatedData)
 
-      if (!this.selectedElement || !this._selectedCyElement) return
+      if (!this.selectedElement) return
 
-      // Update cytoscape element's custom data
-      const cyElement = this._selectedCyElement
-      cyElement.data('custom', updatedData)
-      
-      // Trigger network change event to update latestNetwork
-      const editorComponent = this.$refs.demoEditor
-      if (editorComponent && editorComponent.cyEditor) {
-        // 手动触发 network-change 事件
-        // Use internal sync to update networkState from cy elements
-        editorComponent.cyEditor._syncNetworkFromDisplay('property-save')
+      const editor = this.$refs.x6Editor
+      if (editor) {
+          editor.updateCellData(this.selectedElement.displayId, updatedData)
       }
-
-      // Update selectedElement data
       this.selectedElement.data = updatedData
-
-      console.log('✓ Properties updated in Cytoscape')
     },
     handlePropertyCancel () {
       console.log('Property edit cancelled')
-      // Do nothing, form component will reset internally
-    },
-    handleNodeDrag (node) {
-      if (!node) return
-      const pos = node.position()
-      // Round to avoid excessive decimals in JSON
-      const newPos = { x: Math.round(pos.x), y: Math.round(pos.y) }
-      
-      console.log(`Node ${node.id()} dragged to:`, newPos)
-      
-      // Update data.position so it appears in the JSON editor
-      node.data('position', newPos)
-      
-      // If using 'custom' data field (backend compat), sync it there too
-      const custom = node.data('custom')
-      if (custom) {
-        custom.position = newPos
-        node.data('custom', custom)
-      }
-      
-      // If this node is currently selected, force update the Property Panel
-      // Use loose equality to match string IDs with potentially numeric displayIds
-      if (this.selectedElement && String(this.selectedElement.displayId) === String(node.id())) {
-         // Re-read data to ensure any merging or refs are fresh
-         const updatedData = node.data('custom') || node.data()
-         this.selectedElement.data = JSON.parse(JSON.stringify(updatedData)) // Reactive update
-      }
-      
-      // Trigger global network change to update the Network JSON view
-      const editorComponent = this.$refs.demoEditor
-      if (editorComponent && editorComponent.cyEditor) {
-         editorComponent.cyEditor._syncNetworkFromDisplay('drag')
-      }
     }
   }
 }
@@ -481,7 +373,7 @@ export default {
     padding: 8px 12px;
     border-radius: 4px;
     border: 1px solid #eaeaea;
-    gap: 16px; /* Separation between app actions and editor actions */
+    gap: 16px;
   }
 
   .app-actions {
@@ -516,43 +408,7 @@ export default {
     align-items: center;
   }
 
-  /* Target the injected editor toolbar items */
-  :deep(.cy-editor-toolbar-items) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0px; 
-  }
-  
-  /* Ensure injected toolbar icons look consistent */
-  :deep(.command) {
-    cursor: pointer;
-    padding: 6px;
-    font-size: 20px;
-    color: #666;
-    border-radius: 3px;
-    transition: all 0.2s;
-    display: flex; /* Fix alignment */
-  }
-  :deep(.command:hover) {
-    background: #f0f0f0;
-    color: #333;
-  }
-  :deep(.command.selected) {
-    background: #e6f7ff;
-    color: #1890ff;
-  }
-  :deep(.command.disable) {
-    color: #ccc;
-    cursor: not-allowed;
-  }
-  :deep(.separator) {
-    margin: 0 8px;
-    border-right: 1px solid #eee;
-    height: 20px;
-  }
-
-  .cy-editor {
+  .main-editor {
     flex: 1;
     min-height: 500px;
     border: 1px solid #ddd;
@@ -623,20 +479,6 @@ export default {
     overflow: hidden;
   }
 
-  .navigator-section {
-    height: 200px; /* Fixed height for navigator */
-    border-bottom: 1px solid #eee;
-    position: relative;
-    background: #fdfdfd;
-  }
-  
-  #navigator-container {
-    width: 100%;
-    height: 100%;
-    position: relative;
-  }
-  
-
   .property-section {
     flex: 1;
     overflow-y: auto; /* Scroll property panel internally */
@@ -655,6 +497,7 @@ export default {
     padding: 30px;
     text-align: center;
     background: #fcfcfc;
+    width: 100%;
   }
   
   .empty-icon {
@@ -669,7 +512,6 @@ export default {
     padding: 12px;
     background: #fff;
     min-height: 100px;
-    /* max-height: 200px;  Let main column scroll handle it */
   }
 
   .network-preview pre {
@@ -720,30 +562,4 @@ export default {
     overflow-y: auto;
     flex: 1;
   }
-</style>
-
-<style>
-/* Global override for Cytoscape Navigator Plugin */
-/* Must be non-scoped because the plugin elements are appended dynamically */
-#navigator-container .cytoscape-navigator {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  bottom: auto !important;
-  right: auto !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  border: none !important;
-  background: transparent !important; /* Ensure container matches */
-  z-index: 1 !important;
-  box-shadow: none !important;
-}
-#navigator-container .cytoscape-navigator canvas {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-}
 </style>

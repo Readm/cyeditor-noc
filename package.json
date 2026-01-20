@@ -20,7 +20,7 @@
     ],
     "scripts": {
         "serve": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
-        "build": "vue-cli-service build --target lib --name cyeditor src/index.js",
+        "build": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build --target lib --name cyeditor src/index.js",
         "build:app": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build --mode production",
         "lint": "vue-cli-service lint --fix",
         "docs:dev": "vuepress dev docs",
@@ -55,8 +55,11 @@
     "author": "ryanlei <leiqirong@gmail.com>",
     "license": "ISC",
     "dependencies": {
-        "cytoscape": "^3.7.0",
+        "@antv/x6": "^3.1.4",
+        "@antv/x6-vue-shape": "^3.0.2",
+        "@vue/composition-api": "^1.7.2",
         "jsoneditor": "^10.4.2",
+        "tslib": "^2.8.1",
         "vue-json-viewer": "^2.2.22"
     },
     "devDependencies": {
@@ -72,6 +75,7 @@
         "cypress": "^13.6.3",
         "eslint": "^5.15.3",
         "eslint-plugin-vue": "^5.2.2",
+        "execa": "^5.1.1",
         "jsdom": "^21.0.0",
         "openapi-typescript": "^7.10.1",
         "puppeteer": "^24.34.0",
@@ -82,7 +86,7 @@
         "vite-plugin-vue2": "^2.0.0",
         "vitest": "^0.34.0",
         "vue": "^2.6.10",
-        "vue-template-compiler": "^2.6.10",
+        "vue-template-compiler": "^2.6.14",
         "vuepress": "^1.0.2",
         "webpack": ">=4 < 4.29"
     }

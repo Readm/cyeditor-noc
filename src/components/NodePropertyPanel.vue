@@ -21,7 +21,7 @@ export default {
       default: null
     }
   },
-  data() {
+  data () {
     return {
       editModel: null
     }
@@ -29,7 +29,7 @@ export default {
   watch: {
     nodeData: {
       immediate: true,
-      handler(newData) {
+      handler (newData) {
         if (newData) {
           // Clone full object for arbitrary editing
           this.editModel = JSON.parse(JSON.stringify(newData))
@@ -40,11 +40,11 @@ export default {
     }
   },
   methods: {
-    handleSave(editedModel) {
+    handleSave (editedModel) {
       // Pass full object back
       this.$emit('save', editedModel)
     },
-    handleCancel() {
+    handleCancel () {
       this.$emit('cancel')
     }
   }

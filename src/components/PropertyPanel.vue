@@ -45,7 +45,7 @@ export default {
       default: false
     }
   },
-  data() {
+  data () {
     return {
       localModel: null
     }
@@ -53,7 +53,7 @@ export default {
   watch: {
     model: {
       immediate: true,
-      handler(newModel) {
+      handler (newModel) {
         // Deep copy to avoid direct mutation of prop and break reactivity link temporarily
         // JsonEditor handles its own internal state, we just feed it initially or on external change
         if (newModel) {
@@ -65,19 +65,19 @@ export default {
     }
   },
   methods: {
-    handleSave() {
+    handleSave () {
       if (this.localModel) {
         // Validation: Ensure ID is preserved?
         // For now, raw save. Parent (App.vue or wrapper) should handle merge logic if specific fields are vital.
         this.$emit('save', this.localModel)
       }
     },
-    handleCancel() {
-        // Reload from prop
-        if (this.model) {
-            this.localModel = JSON.parse(JSON.stringify(this.model))
-        }
-        this.$emit('cancel')
+    handleCancel () {
+      // Reload from prop
+      if (this.model) {
+        this.localModel = JSON.parse(JSON.stringify(this.model))
+      }
+      this.$emit('cancel')
     }
   }
 }

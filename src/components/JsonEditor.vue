@@ -59,10 +59,10 @@ export default {
         onError: this.onError,
         ...this.options
       }
-      
+
       this.editor = new JSONEditor(container, options)
       this.editor.set(this.value)
-      
+
       if (this.expandedOnLoad) {
         this.editor.expandAll()
       }
@@ -87,13 +87,13 @@ export default {
       }
     },
     onBlur () {
-        // Essential hook for "Save on Blur" strategy
-        try {
-            const json = this.editor.get()
-            this.$emit('blur', json)
-        } catch (e) {
-            // ignore
-        }
+      // Essential hook for "Save on Blur" strategy
+      try {
+        const json = this.editor.get()
+        this.$emit('blur', json)
+      } catch (e) {
+        // ignore
+      }
     },
     onError (err) {
       this.$emit('error', err)

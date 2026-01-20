@@ -11,9 +11,7 @@
 import { mount } from '@vue/test-utils'
 import App from '../../examples/App.vue'
 import { loadNetworks } from '../../src/api/networkService'
-import { describe, test, expect, beforeEach, afterEach } from 'vitest'
-
-import { vi } from 'vitest'
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Mock API
 vi.mock('../../src/api/networkService', () => ({
@@ -26,14 +24,14 @@ vi.mock('../../src/api/networkService', () => ({
 
 // Mock WebSocket
 global.WebSocket = class WebSocket {
-  constructor(url) {
+  constructor (url) {
     this.url = url
     setTimeout(() => {
       if (this.onopen) this.onopen()
     }, 0)
   }
-  close() { }
-  send() { }
+  close () { }
+  send () { }
 }
 
 describe.skip('PropertyPanel E2E Tests', () => {
@@ -115,7 +113,7 @@ describe.skip('PropertyPanel E2E Tests', () => {
       stubs: {
         CyEditor: {
           render: h => h('div', { class: 'cy-editor-stub' }),
-          data() {
+          data () {
             return {
               cyEditor: {
                 cy: {
@@ -274,7 +272,7 @@ describe.skip('PropertyPanel E2E Tests', () => {
       const updatedData = {
         ...mockNetwork.edges[0],
         latency: 20, // 修改延迟
-        bandwidth: 2  // 修改带宽
+        bandwidth: 2 // 修改带宽
       }
 
       const propertyPanel = wrapper.findComponent({ name: 'EdgePropertyPanel' })

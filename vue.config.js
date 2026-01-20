@@ -10,6 +10,12 @@ module.exports = {
   // 不生成 source map 以减小体积
   productionSourceMap: false,
 
+  // Transpile dependencies to support modern features (like private class fields) in dependencies
+  transpileDependencies: [
+    'ml-matrix',
+    /@antv.*/
+  ],
+
   // 配置页面（用于 npm run build:app）
   pages: {
     index: {
